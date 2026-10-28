@@ -3,147 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADHD Life Planner</title>
-    <!-- iOS Web App Meta Tags to make it look like a real app -->
+    <title>Life Planner</title>
+    <!-- iOS native application styling -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <style>
-        /* Cream and Terracotta minimalist color palette */
+        /* The Premium Etsy Theme: Cream, Slate & Terracotta */
+        :root {
+            --bg-color: #F4F0EA;
+            --card-bg: #FFFFFF;
+            --text-main: #2A2F35;
+            --text-muted: #7A828A;
+            --accent: #C96F53;
+            --accent-light: #FBF6F0;
+            --border-color: #E6DFD5;
+            --success: #6B8E78;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #F9F6F0;
-            color: #2F3538;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            -webkit-font-smoothing: antialiased;
         }
-        .app-container {
+
+        .phone-wrapper {
             width: 100%;
-            max-width: 400px;
-            background: #FFFFFF;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            max-width: 390px; /* Exact iPhone screen layout boundaries */
             box-sizing: border-box;
         }
-        h2 { color: #D96B43; margin-top: 0; font-size: 20px; }
-        .card {
-            background: #FDFBF7;
-            border: 1px solid #EAE5DB;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
+
+        .header-greeting {
+            margin: 12px 4px 24px 4px;
         }
+
+        .header-greeting h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 4px 0;
+            letter-spacing: -0.5px;
+        }
+
+        .header-greeting p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        .app-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 18px rgba(42, 47, 53, 0.02);
+        }
+
+        .app-card h2 {
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin: 0 0 16px 0;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Clean Minimal Input Field */
+        .input-group {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
         input[type="text"] {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #C4BDB0;
-            border-radius: 8px;
+            padding: 14px 16px;
+            border: 1px solid var(--border-color);
+            background-color: var(--accent-light);
+            color: var(--text-main);
+            border-radius: 12px;
             box-sizing: border-box;
-            font-size: 16px;
-            margin-bottom: 10px;
+            font-size: 15px;
+            transition: all 0.2s ease;
+            outline: none;
         }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            background-color: var(--card-bg);
+        }
+
+        /* Minimalist Buttons */
         button {
-            background-color: #D96B43;
+            background-color: var(--accent);
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 14px;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
             cursor: pointer;
             width: 100%;
-            font-weight: bold;
+            transition: opacity 0.1s ease;
         }
-        button:active { background-color: #B85632; }
+
+        button:active {
+            opacity: 0.85;
+        }
+
+        /* Elegant Timer Layout */
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px 0;
+        }
+
         .timer-display {
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin: 10px 0;
-            color: #2F3538;
+            font-size: 56px;
+            font-weight: 300;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+            color: var(--text-main);
         }
-        .sort-actions {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
+
+        /* Smart Sorter Design */
+        .sorter-box {
+            background: var(--accent-light);
+            border: 1px dashed var(--accent);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+            color: var(--text-main);
+            font-weight: 500;
         }
-        .sort-btn { background-color: #6E8E75; } /* Sage green for list sorting */
-        .dump-item-box {
-            font-size: 18px;
-            background: #FFF;
-            padding: 12px;
-            border-left: 4px solid #D96B43;
-            border-radius: 4px;
-            margin: 10px 0;
+
+        .split-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background-color: #ECE7E1;
+            color: var(--text-main);
+        }
+
+        /* Task & Habit Lists Architecture */
+        .list-section-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 18px 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--accent-light);
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 4px;
+            border-bottom: 1px solid #FAF9F6;
+            font-size: 15px;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .check-circle {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .check-circle:hover {
+            border-color: var(--success);
+            background: var(--accent-light);
+        }
+
+        .empty-state {
+            font-size: 14px;
+            color: var(--text-muted);
             font-style: italic;
+            padding: 8px 4px;
         }
-        .list-title { font-weight: bold; margin-top: 10px; color: #6E8E75; }
-        ul { padding-left: 20px; margin: 5px 0; }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Section 1: 5-Minute Timer -->
-        <div class="card">
-            <h2>⏱️ Just 5 Minutes</h2>
-            <div class="timer-display" id="timerDisplay">05:00</div>
-            <button id="timerBtn" onclick="toggleTimer()">Start 5 Minutes</button>
+    <div class="phone-wrapper">
+        
+        <!-- App Header Welcome -->
+        <div class="header-greeting">
+            <h1 id="greetingText">Good morning</h1>
+            <p>Find your next small step.</p>
         </div>
 
-        <!-- Section 2: Brain Dump Entry -->
-        <div class="card">
-            <h2>✍️ Brain Dump</h2>
-            <input type="text" id="dumpInput" placeholder="Type a thought and press enter..." onkeypress="handleDumpIn(event)">
-            <button onclick="addDumpItem()">Unload Thought</button>
-        </div>
-
-        <!-- Section 3: The Sorting Sorcery -->
-        <div class="card" id="sorterCard" style="display: none;">
-            <h2>🧩 Sort Your Thought</h2>
-            <p style="font-size: 12px; color: #777; margin: 0;">Deal with one item at a time:</p>
-            <div class="dump-item-box" id="currentItemToSort"></div>
-            <div class="sort-actions">
-                <button class="sort-btn" onclick="sortItem('today')">Do Today</button>
-                <button class="sort-btn" onclick="sortItem('later')">Later List</button>
+        <!-- 1. The Focus Module -->
+        <div class="app-card">
+            <h2><span>⏱️</span> Just 5 Minutes</h2>
+            <div class="timer-container">
+                <div class="timer-display" id="timerDisplay">05:00</div>
+                <button id="timerBtn" onclick="toggleTimer()">Start session</button>
             </div>
         </div>
 
-        <!-- Section 4: Organized Tasks Dashboard -->
-        <div class="card">
-            <h2>🌿 Today's Action</h2>
-            <div class="list-title">🎯 Today's Focus (Max 3)</div>
-            <ul id="todayList"></ul>
-            
-            <div class="list-title">📁 Parked For Later</div>
-            <ul id="laterList"></ul>
+        <!-- 2. The Thought Storage Module -->
+        <div class="app-card">
+            <h2><span>✍️</span> Brain Dump</h2>
+            <div class="input-group">
+                <input type="text" id="dumpInput" placeholder="Get it out of your head..." onkeypress="handleDumpIn(event)">
+            </div>
+            <button onclick="addDumpItem()">Unload</button>
         </div>
+
+        <!-- 3. Dynamic Process Card -->
+        <div class="app-card" id="sorterCard" style="display: none;">
+            <h2><span>🧩</span> Sorter</h2>
+            <div class="sorter-box" id="currentItemToSort"></div>
+            <div class="split-buttons">
+                <button onclick="sortItem('today')">Do Today</button>
+                <button class="btn-secondary" onclick="sortItem('later')">Later</button>
+            </div>
+        </div>
+
+        <!-- 4. Operational View Workspace -->
+        <div class="app-card">
+            <h2><span>🌿</span> Dashboard</h2>
+            
+            <div class="list-section-header">Today's Three (Max 3)</div>
+            <div id="todayList"></div>
+            
+            <div class="list-section-header">Parked For Later</div>
+            <div id="laterList"></div>
+        </div>
+
     </div>
 
     <script>
-        // --- APP STATE DATA ---
+        // --- APP ENGINE & LOCAL MEMORY ---
         let state = {
             brainDump: [],
             todayTasks: [],
             laterTasks: []
         };
 
-        // Load data from phone/browser memory if it exists
-        if(localStorage.getItem('plannerData')) {
-            state = JSON.parse(localStorage.getItem('plannerData'));
+        // Set contextual greeting based on local clock time
+        const hour = new Date().getHours();
+        if (hour < 12) document.getElementById('greetingText').innerText = "Good morning";
+        else if (hour < 18) document.getElementById('greetingText').innerText = "Good afternoon";
+        else document.getElementById('greetingText').innerText = "Good evening";
+
+        if(localStorage.getItem('premiumPlannerData')) {
+            state = JSON.parse(localStorage.getItem('premiumPlannerData'));
             renderLists();
             updateSorter();
         }
 
         function saveData() {
-            localStorage.setItem('plannerData', JSON.stringify(state));
+            localStorage.setItem('premiumPlannerData', JSON.stringify(state));
         }
 
-        // --- BRAIN DUMP LOGIC ---
         function handleDumpIn(e) {
             if(e.key === 'Enter') addDumpItem();
         }
@@ -171,12 +310,12 @@
 
         function sortItem(destination) {
             if(state.brainDump.length === 0) return;
-            const item = state.brainDump.shift(); // take the first item out
+            const item = state.brainDump.shift();
             
             if(destination === 'today') {
                 if(state.todayTasks.length >= 3) {
-                    alert("Today's Focus is full! Finish one or park it for later. Three means three.");
-                    state.brainDump.unshift(item); // put it back
+                    alert("Today's priorities are full. Three means three.");
+                    state.brainDump.unshift(item);
                     return;
                 }
                 state.todayTasks.push(item);
@@ -190,53 +329,3 @@
         }
 
         function renderLists() {
-            const todayUl = document.getElementById('todayList');
-            const laterUl = document.getElementById('laterList');
-            
-            todayUl.innerHTML = state.todayTasks.map((t, idx) => `<li>${t} <span style="color:#D96B43; cursor:pointer; margin-left:10px;" onclick="completeTask('today', ${idx})">✓</span></li>`).join('');
-            laterUl.innerHTML = state.laterTasks.map((t, idx) => `<li>${t} <span style="color:#D96B43; cursor:pointer; margin-left:10px;" onclick="completeTask('later', ${idx})">✓</span></li>`).join('');
-        }
-
-        function completeTask(listName, index) {
-            if(listName === 'today') state.todayTasks.splice(index, 1);
-            if(listName === 'later') state.laterTasks.splice(index, 1);
-            saveData();
-            renderLists();
-        }
-
-        // --- 5-MINUTE TIMER LOGIC ---
-        let timerInterval = null;
-        let timeLeft = 300; // 5 minutes in seconds
-
-        function toggleTimer() {
-            const btn = document.getElementById('timerBtn');
-            if(timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-                btn.innerText = "Resume 5 Minutes";
-            } else {
-                btn.innerText = "Pause Timer";
-                timerInterval = setInterval(() => {
-                    timeLeft--;
-                    displayTime();
-                    if(timeLeft <= 0) {
-                        clearInterval(timerInterval);
-                        timerInterval = null;
-                        alert("5 Minutes is up! You are allowed to stop now, or keep going if you have momentum!");
-                        timeLeft = 300;
-                        btn.innerText = "Start 5 Minutes";
-                        displayTime();
-                    }
-                }, 1000);
-            }
-        }
-
-        function displayTime() {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            document.getElementById('timerDisplay').innerText = 
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
-    </script>
-</body>
-</html>
