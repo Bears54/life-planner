@@ -38,7 +38,7 @@
   .week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:12px}
   .week input{width:22px;height:22px;accent-color:var(--rust)}
   nav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
-  nav button{background:#fff;color:var(--brown);padding:10px 6px;min-height:44px;flex:1;font-size:14px}
+  nav button{background:#fff;color:var(--brown);padding:10px 2px;min-height:44px;flex:1;font-size:13px}
   nav button.active{background:var(--rust);color:#fff}
   .view{display:none} .view.active{display:block}
   .timer{font-size:56px;font-weight:800;text-align:center;margin:10px 0}
@@ -53,7 +53,7 @@
 <body>
 <header>
   <h1>Kelly Planner</h1>
-  <p class="sub">One calm place for tasks, your day, habits, notes and focus. No account. No paywall.</p>
+  <p class="sub">One calm place for tasks, your day, habits, notes, important dates, focus, and sync. No account. No paywall.</p>
 </header>
 
 <nav id="nav" aria-label="Planner sections">
@@ -63,6 +63,8 @@
   <button data-view="habits">Habits</button>
   <button data-view="notes">Notes</button>
   <button data-view="focus">Focus</button>
+  <button data-view="dates">Dates</button>
+  <button data-view="sync">Sync</button>
 </nav>
 
 <main>
@@ -136,7 +138,7 @@
 
     <div class="card">
       <h2>Data tools</h2>
-      <p class="small">Your data lives on this device only for now. Export a file to move it to another device, and import it there. Sync choice can be decided later.</p>
+      <p class="small">Your data lives on this device until you sync it. Use Export / Import to move a file to another device, or open the Sync tab to sync automatically with a private GitHub Gist.</p>
       <div class="row">
         <button type="button" id="exportBtn">Export JSON</button>
         <button type="button" class="secondary" id="importBtn">Import JSON</button>
@@ -219,6 +221,73 @@
       <p class="small" id="timerMsg" style="text-align:center"></p>
     </div>
   </section>
+
+  <!-- IMPORTANT DATES -->
+  <section id="view-dates" class="view">
+    <div class="card">
+      <h2>Add an important date</h2>
+      <p class="small">Hint: e.g. a birthday, anniversary, or other yearly date. No dates are pre-filled — add only your own.</p>
+      <form id="dateForm">
+        <label for="dName">Person / event name</label><input id="dName" required placeholder="e.g. Mum">
+        <div class="row">
+          <div><label for="dType">Type</label><select id="dType"><option>Birthday</option><option>Anniversary</option><option>Other</option></select></div>
+          <div><label for="dMonth">Month (1–12)</label><input type="number" id="dMonth" min="1" max="12" required placeholder="e.g. 5"></div>
+          <div><label for="dDay">Day (1–31)</label><input type="number" id="dDay" min="1" max="31" required placeholder="e.g. 14"></div>
+          <div><label for="dYear">Year (optional)</label><input type="number" id="dYear" placeholder="Leave blank if unknown"></div>
+        </div>
+        <label for="dNotes">Notes</label><textarea id="dNotes" placeholder="Any details"></textarea>
+        <p style="margin-top:12px"><button type="submit">Save date</button></p>
+      </form>
+    </div>
+    <div class="card peach">
+      <h2>Upcoming</h2>
+      <p class="small">Sorted by next occurrence, repeating every year. Birthdays show the age turning; anniversaries show years together, when a year is given.</p>
+      <div id="upcomingDates"></div>
+    </div>
+    <div class="card">
+      <h2>All dates</h2>
+      <label for="fDateType">Filter by type</label><select id="fDateType"><option>All</option><option>Birthday</option><option>Anniversary</option><option>Other</option></select>
+      <div id="allDates"></div>
+    </div>
+  </section>
+
+  <!-- SYNC -->
+  <section id="view-sync" class="view">
+    <div class="card">
+      <h2>Cross-device sync</h2>
+      <p class="small">Sync this planner between your iPhone, Windows computer, and other devices using a private GitHub Gist. This runs in your browser only — no separate server is involved.</p>
+      <p class="small"><strong>Privacy note:</strong> the gist is private, but do not put highly sensitive information in the planner. Your token below stays on this device only and is never included in an export file.</p>
+      <label for="gistToken">GitHub personal access token</label>
+      <div class="row">
+        <input type="password" id="gistToken" placeholder="Paste your token here" autocomplete="off">
+        <button type="button" class="secondary smallbtn" id="toggleTokenBtn">Show</button>
+        <button type="button" class="secondary smallbtn" id="saveTokenBtn">Save token</button>
+      </div>
+      <p class="small">Warning: never share this token with anyone. It is stored only in this device's local storage. A token with the <strong>gist</strong> scope is needed. If you do not have one, create one in GitHub Settings &gt; Developer settings &gt; Personal access tokens.</p>
+      <label for="gistIdInput">Sync Gist ID (filled in automatically when you create one)</label>
+      <div class="row">
+        <input id="gistIdInput" placeholder="e.g. abc123… (leave blank until a gist is created)">
+        <button type="button" class="secondary smallbtn" id="saveGistIdBtn">Save Gist ID</button>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button type="button" id="createGistBtn">Create Sync Gist</button>
+        <button type="button" class="secondary" id="pullBtn">Pull</button>
+        <button type="button" class="secondary" id="pushBtn">Push</button>
+        <button type="button" id="syncNowBtn">Sync Now</button>
+      </div>
+      <p class="small" id="syncStatus"></p>
+      <p class="small" id="syncLast"></p>
+    </div>
+    <div class="card">
+      <h2>Manual fallback — Export / Import JSON</h2>
+      <p class="small">If you do not want to use Gist sync, this still works: export a file on one device and import it on the other. This does not include your token.</p>
+      <div class="row">
+        <button type="button" id="exportBtn2">Export JSON</button>
+        <button type="button" class="secondary" id="importBtn2">Import JSON</button>
+      </div>
+      <p class="small">How merging works on Pull / Sync Now: for tasks, habits, notes, lists, and dates, the newer item (by its last-edited time) wins. Local items are not silently deleted — an item that exists only on this device is kept.</p>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -235,6 +304,7 @@ function fmtDate(s) {
   const d = new Date(s + 'T12:00:00');
   return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
+function stamp(o) { o.updatedAt = new Date().toISOString(); return o; }
 function seed() {
   const t = localDateStr(new Date());
   return {
@@ -246,6 +316,7 @@ function seed() {
     habits: [{ id: uid(), name: 'Drink water', tiny: 'One glass of water', checks: {} }],
     notes: [{ id: uid(), title: 'Welcome', body: 'This is your calm planner. Add notes here, and use Tasks for your day.' }],
     lists: [{ id: uid(), title: 'Groceries', items: [{ id: uid(), text: 'Milk', done: false }] }],
+    dates: [],
     brain: {}
   };
 }
@@ -255,6 +326,12 @@ try {
   state = raw ? JSON.parse(raw) : null;
   if (!state || !Array.isArray(state.tasks)) state = seed();
 } catch (e) { state = seed(); }
+// Migrate older saves: ensure dates exist and every item has an updatedAt timestamp.
+state.dates = Array.isArray(state.dates) ? state.dates : [];
+['tasks', 'habits', 'notes', 'lists', 'dates'].forEach((col) => {
+  if (!Array.isArray(state[col])) state[col] = [];
+  state[col].forEach((item) => { if (item && !item.updatedAt) item.updatedAt = new Date().toISOString(); });
+});
 function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 let selectedDate = localDateStr(new Date());
 let calCursor = new Date();
@@ -303,13 +380,13 @@ function renderToday() {
 function bindTaskButtons(root) {
   if (!root) return;
   root.querySelectorAll('[data-done]').forEach((el) => {
-    el.onclick = () => { const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { t.status = el.checked ? 'Done' : 'Not Started'; save(); renderAll(); } };
+    el.onclick = () => { const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { t.status = el.checked ? 'Done' : 'Not Started'; stamp(t); save(); renderAll(); } };
   });
   root.querySelectorAll('[data-star]').forEach((el) => {
     el.onclick = () => {
       const t = state.tasks.find((x) => x.id === el.dataset.star); if (!t) return;
       if (!t.starred && state.tasks.filter((x) => x.starred).length >= 3) { alert('Today\'s Three is full (3). Unstar another task first.'); return; }
-      t.starred = !t.starred; save(); renderAll();
+      t.starred = !t.starred; stamp(t); save(); renderAll();
     };
   });
   root.querySelectorAll('[data-del]').forEach((el) => {
@@ -322,7 +399,7 @@ function bindTaskButtons(root) {
       t.title = title.trim() || t.title;
       const notes = prompt('Edit notes', t.notes || ''); if (notes !== null) t.notes = notes;
       const status = prompt('Status: Not Started, In Progress, or Done', t.status); if (status && ['Not Started', 'In Progress', 'Done'].includes(status)) t.status = status;
-      save(); renderAll();
+      stamp(t); save(); renderAll();
     };
   });
 }
@@ -352,7 +429,8 @@ function renderCalendar() {
     for (let d = 1; d <= daysInMonth; d++) {
       const ds = localDateStr(new Date(y, m, d));
       const count = state.tasks.filter((t) => t.doDate === ds).length;
-      html += '<button type="button" data-day="' + ds + '" class="' + (count ? 'has' : '') + (ds === selectedDate ? ' sel' : '') + '">' + d + (count ? '<br><small>' + count + ' task' + (count > 1 ? 's' : '') + '</small>' : '') + '</button>';
+      const dateCount = (state.dates || []).filter((x) => x.month === m + 1 && x.day === d).length;
+      html += '<button type="button" data-day="' + ds + '" class="' + ((count || dateCount) ? 'has' : '') + (ds === selectedDate ? ' sel' : '') + '">' + d + (count ? '<br><small>' + count + ' task' + (count > 1 ? 's' : '') + '</small>' : '') + (dateCount ? '<br><small>● ' + dateCount + ' date' + (dateCount > 1 ? 's' : '') + '</small>' : '') + '</button>';
     }
     html += '</div>';
     body.innerHTML = html;
@@ -389,7 +467,7 @@ function renderHabits() {
       + '<button type="button" class="secondary smallbtn" data-hdel="' + h.id + '" style="margin-top:8px">Delete habit</button></div></div>';
   }).join('') : '<p>No habits yet. Add one above.</p>';
   $('habitList').querySelectorAll('[data-habit]').forEach((el) => {
-    el.onchange = () => { const h = state.habits.find((x) => x.id === el.dataset.habit); if (h) { h.checks = h.checks || {}; h.checks[el.dataset.day] = el.checked; save(); renderHabits(); } };
+    el.onchange = () => { const h = state.habits.find((x) => x.id === el.dataset.habit); if (h) { h.checks = h.checks || {}; h.checks[el.dataset.day] = el.checked; stamp(h); save(); renderHabits(); } };
   });
   $('habitList').querySelectorAll('[data-hdel]').forEach((el) => {
     el.onclick = () => { if (confirm('Delete this habit?')) { state.habits = state.habits.filter((x) => x.id !== el.dataset.hdel); save(); renderHabits(); } };
@@ -407,26 +485,144 @@ function renderNotes() {
     + '<div class="row" style="margin-top:8px"><input data-newitem="' + l.id + '" placeholder="Add an item"><button type="button" class="secondary smallbtn" data-additem="' + l.id + '">Add item</button>'
     + '<button type="button" class="secondary smallbtn" data-ldel="' + l.id + '">Delete list</button></div></div>').join('') : '<p>No lists yet.</p>';
   $('listArea').querySelectorAll('[data-item]').forEach((el) => {
-    el.onchange = () => { const parts = el.dataset.item.split(':'); const l = state.lists.find((x) => x.id === parts[0]); const it = l && l.items.find((y) => y.id === parts[1]); if (it) { it.done = el.checked; save(); renderNotes(); } };
+    el.onchange = () => { const parts = el.dataset.item.split(':'); const l = state.lists.find((x) => x.id === parts[0]); const it = l && l.items.find((y) => y.id === parts[1]); if (it) { it.done = el.checked; stamp(l); save(); renderNotes(); } };
   });
   $('listArea').querySelectorAll('[data-additem]').forEach((el) => {
     el.onclick = () => {
       const input = $('listArea').querySelector('[data-newitem="' + el.dataset.additem + '"]');
       const text = input.value.trim(); if (!text) return;
-      const l = state.lists.find((x) => x.id === el.dataset.additem); l.items.push({ id: uid(), text, done: false }); save(); renderNotes();
+      const l = state.lists.find((x) => x.id === el.dataset.additem); l.items.push({ id: uid(), text, done: false }); stamp(l); save(); renderNotes();
     };
   });
   $('listArea').querySelectorAll('[data-ldel]').forEach((el) => {
     el.onclick = () => { if (confirm('Delete this list?')) { state.lists = state.lists.filter((x) => x.id !== el.dataset.ldel); save(); renderNotes(); } };
   });
 }
-function renderAll() { renderToday(); renderTasks(); renderCalendar(); renderHabits(); renderNotes(); }
+// ---- Important Dates ----
+function nextOccurrence(entry, today) {
+  let y = today.getFullYear();
+  let cand = new Date(y, entry.month - 1, entry.day);
+  if (entry.month === 2 && entry.day === 29 && cand.getMonth() !== 1) cand = new Date(y, 1, 28);
+  if (cand < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+    y += 1; cand = new Date(y, entry.month - 1, entry.day);
+    if (entry.month === 2 && entry.day === 29 && cand.getMonth() !== 1) cand = new Date(y, 1, 28);
+  }
+  return cand;
+}
+function daysUntil(entry) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const next = nextOccurrence(entry, today);
+  return { next, days: Math.round((next - today) / 86400000) };
+}
+function monthName(m) { return new Date(2000, m - 1, 1).toLocaleDateString(undefined, { month: 'long' }); }
+function renderDates() {
+  const filter = $('fDateType') ? $('fDateType').value : 'All';
+  const list = (state.dates || []).filter((d) => filter === 'All' || d.type === filter);
+  const withNext = list.map((d) => ({ d, info: daysUntil(d) })).sort((a, b) => a.info.days - b.info.days);
+  $('upcomingDates').innerHTML = withNext.length ? withNext.map(({ d, info }) => {
+    let extra = '';
+    if (d.year && d.type === 'Birthday') extra = ' · Turns ' + (info.next.getFullYear() - d.year);
+    if (d.year && d.type === 'Anniversary') extra = ' · ' + (info.next.getFullYear() - d.year) + ' years together';
+    return '<div class="task"><div style="flex:1"><strong>' + esc(d.name) + '</strong> <span class="pill">' + esc(d.type) + '</span>'
+      + '<div>' + info.next.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })
+      + ' — <strong>' + (info.days === 0 ? 'Today!' : info.days === 1 ? 'Tomorrow' : 'in ' + info.days + ' days') + '</strong>' + extra + '</div>'
+      + (d.notes ? '<div class="small">' + esc(d.notes) + '</div>' : '')
+      + '<div class="row" style="margin-top:6px"><button type="button" class="secondary smallbtn" data-dedit="' + d.id + '">Edit</button>'
+      + '<button type="button" class="secondary smallbtn" data-ddel="' + d.id + '">Delete</button></div></div></div>';
+  }).join('') : '<p>No important dates yet. Add one above — nothing is pre-filled.</p>';
+  let grouped = '';
+  for (let m = 1; m <= 12; m++) {
+    const inMonth = list.filter((d) => d.month === m).sort((a, b) => a.day - b.day);
+    if (!inMonth.length) continue;
+    grouped += '<h3>' + monthName(m) + '</h3>' + inMonth.map((d) => '<div class="task"><div style="flex:1"><strong>' + esc(d.name) + '</strong> <span class="pill">' + esc(d.type) + '</span>'
+      + '<div class="small">' + monthName(d.month) + ' ' + d.day + (d.year ? ', ' + d.year : ' (year not given)') + (d.notes ? ' — ' + esc(d.notes) : '') + '</div></div></div>').join('');
+  }
+  $('allDates').innerHTML = grouped || '<p>No dates in this filter yet.</p>';
+  document.querySelectorAll('[data-dedit]').forEach((el) => {
+    el.onclick = () => {
+      const d = state.dates.find((x) => x.id === el.dataset.dedit); if (!d) return;
+      const name = prompt('Person / event name', d.name); if (name === null) return; d.name = name.trim() || d.name;
+      const type = prompt('Type: Birthday, Anniversary, or Other', d.type); if (type && ['Birthday', 'Anniversary', 'Other'].includes(type)) d.type = type;
+      const month = parseInt(prompt('Month (1–12)', d.month), 10); if (month >= 1 && month <= 12) d.month = month;
+      const day = parseInt(prompt('Day (1–31)', d.day), 10); if (day >= 1 && day <= 31) d.day = day;
+      const yearRaw = prompt('Year (leave blank if unknown)', d.year || ''); d.year = yearRaw && parseInt(yearRaw, 10) ? parseInt(yearRaw, 10) : null;
+      const notes = prompt('Notes', d.notes || ''); if (notes !== null) d.notes = notes;
+      stamp(d); save(); renderDates(); renderCalendar();
+    };
+  });
+  document.querySelectorAll('[data-ddel]').forEach((el) => {
+    el.onclick = () => { if (confirm('Delete this date?')) { state.dates = state.dates.filter((x) => x.id !== el.dataset.ddel); save(); renderDates(); renderCalendar(); } };
+  });
+}
+// ---- Sync (GitHub Gist, client-side only) ----
+const TOKEN_KEY = 'kelly-planner-gist-token';
+const SYNC_KEY = 'kelly-planner-sync';
+function getSyncMeta() { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { return {}; } }
+function setSyncMeta(meta) { try { localStorage.setItem(SYNC_KEY, JSON.stringify(meta)); } catch (e) {} }
+function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+function exportableState() { return { tasks: state.tasks, habits: state.habits, notes: state.notes, lists: state.lists, dates: state.dates, brain: state.brain || {} }; }
+function renderSyncStatus() {
+  const meta = getSyncMeta();
+  const tokenEl = $('gistToken'); if (tokenEl && document.activeElement !== tokenEl) tokenEl.value = getToken();
+  $('gistIdInput').value = meta.gistId || '';
+  $('syncLast').textContent = meta.lastSync ? 'Last sync: ' + new Date(meta.lastSync).toLocaleString() : 'Not synced yet with a Gist.';
+}
+async function gistCall(path, method, body) {
+  const token = getToken();
+  if (!token) throw new Error('No token saved. Paste a GitHub token with the gist scope and tap Save token first.');
+  const res = await fetch('https://api.github.com' + path, {
+    method,
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await res.text();
+  let data = null; try { data = JSON.parse(text); } catch (e) {}
+  if (!res.ok) throw new Error((data && data.message) || ('GitHub error ' + res.status + '. Check the token and try again.'));
+  return data;
+}
+function mergeRemote(remote) {
+  if (!remote || typeof remote !== 'object') throw new Error('The gist did not contain planner data.');
+  ['tasks', 'habits', 'notes', 'lists', 'dates'].forEach((col) => {
+    if (!Array.isArray(remote[col])) return;
+    const local = state[col] || [];
+    const byId = new Map(local.map((x) => [x.id, x]));
+    remote[col].forEach((item) => {
+      if (!item || !item.id) return;
+      const existing = byId.get(item.id);
+      if (!existing) { local.push(item); }
+      else if ((item.updatedAt || '') > (existing.updatedAt || '')) { Object.assign(existing, item); }
+    });
+    state[col] = local;
+  });
+  if (remote.brain && typeof remote.brain === 'object') {
+    state.brain = state.brain || {};
+    Object.keys(remote.brain).forEach((k) => { if (!(k in state.brain)) state.brain[k] = remote.brain[k]; });
+  }
+}
+async function doPull() {
+  const meta = getSyncMeta();
+  if (!meta.gistId) throw new Error('No Sync Gist ID saved. Tap Create Sync Gist first, or paste an existing Gist ID and save it.');
+  const gist = await gistCall('/gists/' + meta.gistId, 'GET');
+  const file = gist.files && gist.files['kelly-planner-sync.json'];
+  if (!file || !file.content) throw new Error('Gist found, but it does not contain kelly-planner-sync.json.');
+  mergeRemote(JSON.parse(file.content));
+  save(); renderAll(); renderSyncStatus();
+}
+async function doPush() {
+  const meta = getSyncMeta();
+  if (!meta.gistId) throw new Error('No Sync Gist ID saved. Tap Create Sync Gist first.');
+  await gistCall('/gists/' + meta.gistId, 'PATCH', { files: { 'kelly-planner-sync.json': { content: JSON.stringify(exportableState(), null, 2) } } });
+  meta.lastSync = new Date().toISOString(); setSyncMeta(meta); renderSyncStatus();
+}
+function renderAll() { renderToday(); renderTasks(); renderCalendar(); renderHabits(); renderNotes(); renderDates(); renderSyncStatus(); }
 function showView(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   const el = $('view-' + name); if (el) el.classList.add('active');
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'today') renderToday();
   if (name === 'calendar') renderCalendar();
+  if (name === 'dates') renderDates();
+  if (name === 'sync') renderSyncStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('#nav button').forEach((b) => { b.onclick = () => showView(b.dataset.view); });
@@ -441,7 +637,7 @@ $('brainHead').onchange = saveBrain; $('brainEnergy').onchange = saveBrain;
 $('taskForm').onsubmit = (e) => {
   e.preventDefault();
   const title = $('tTitle').value.trim(); if (!title) return;
-  state.tasks.push({ id: uid(), title, notes: $('tNotes').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || localDateStr(new Date()), dueDate: $('tDue').value || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value, duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value, starred: false, isDemo: false });
+  state.tasks.push(stamp({ id: uid(), title, notes: $('tNotes').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || localDateStr(new Date()), dueDate: $('tDue').value || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value, duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value, starred: false, isDemo: false }));
   save(); e.target.reset(); $('tDur').value = 30; renderAll(); showView('tasks');
 };
 $('taskReset').onclick = () => { $('taskForm').reset(); $('tDur').value = 30; };
@@ -449,9 +645,43 @@ $('tSearch').oninput = renderTasks; $('fStatus').onchange = renderTasks; $('fCat
 $('calPrev').onclick = () => { calCursor.setMonth(calCursor.getMonth() - 1); renderCalendar(); };
 $('calNext').onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderCalendar(); };
 $('calMode').onchange = (e) => { calMode = e.target.value; renderCalendar(); };
-$('habitForm').onsubmit = (e) => { e.preventDefault(); const name = $('hName').value.trim(); if (!name) return; state.habits.push({ id: uid(), name, tiny: $('hTiny').value.trim(), checks: {} }); save(); e.target.reset(); renderHabits(); };
-$('noteForm').onsubmit = (e) => { e.preventDefault(); const title = $('nTitle').value.trim(); if (!title) return; state.notes.push({ id: uid(), title, body: $('nBody').value.trim() }); save(); e.target.reset(); renderNotes(); };
-$('listForm').onsubmit = (e) => { e.preventDefault(); const title = $('lTitle').value.trim(); if (!title) return; state.lists.push({ id: uid(), title, items: [] }); save(); e.target.reset(); renderNotes(); };
+$('habitForm').onsubmit = (e) => { e.preventDefault(); const name = $('hName').value.trim(); if (!name) return; state.habits.push(stamp({ id: uid(), name, tiny: $('hTiny').value.trim(), checks: {} })); save(); e.target.reset(); renderHabits(); };
+$('noteForm').onsubmit = (e) => { e.preventDefault(); const title = $('nTitle').value.trim(); if (!title) return; state.notes.push(stamp({ id: uid(), title, body: $('nBody').value.trim() })); save(); e.target.reset(); renderNotes(); };
+$('listForm').onsubmit = (e) => { e.preventDefault(); const title = $('lTitle').value.trim(); if (!title) return; state.lists.push(stamp({ id: uid(), title, items: [] })); save(); e.target.reset(); renderNotes(); };
+$('dateForm').onsubmit = (e) => {
+  e.preventDefault();
+  const month = parseInt($('dMonth').value, 10), day = parseInt($('dDay').value, 10);
+  const yearRaw = $('dYear').value.trim();
+  if (!month || month < 1 || month > 12 || !day || day < 1 || day > 31) { alert('Please enter a valid month (1–12) and day (1–31).'); return; }
+  state.dates.push(stamp({ id: uid(), name: $('dName').value.trim(), type: $('dType').value, month, day, year: yearRaw ? parseInt(yearRaw, 10) : null, notes: $('dNotes').value.trim() }));
+  save(); e.target.reset(); renderDates(); renderCalendar();
+};
+$('fDateType').onchange = renderDates;
+$('saveTokenBtn').onclick = () => { try { localStorage.setItem(TOKEN_KEY, $('gistToken').value.trim()); } catch (e) {} $('syncStatus').textContent = 'Token saved on this device only.'; };
+$('toggleTokenBtn').onclick = () => { const el = $('gistToken'); const show = el.type === 'password'; el.type = show ? 'text' : 'password'; $('toggleTokenBtn').textContent = show ? 'Hide' : 'Show'; };
+$('saveGistIdBtn').onclick = () => { const meta = getSyncMeta(); meta.gistId = $('gistIdInput').value.trim(); setSyncMeta(meta); $('syncStatus').textContent = meta.gistId ? 'Gist ID saved.' : 'Gist ID cleared.'; };
+$('createGistBtn').onclick = async () => {
+  try {
+    $('syncStatus').textContent = 'Creating private sync gist…';
+    const gist = await gistCall('/gists', 'POST', { description: 'Kelly Planner sync (private)', public: false, files: { 'kelly-planner-sync.json': { content: JSON.stringify(exportableState(), null, 2) } } });
+    const meta = getSyncMeta(); meta.gistId = gist.id; meta.lastSync = new Date().toISOString(); setSyncMeta(meta); renderSyncStatus();
+    $('syncStatus').textContent = 'Sync gist created and current data uploaded. Use Sync Now on your other devices (with the same token saved there) to pull it in.';
+  } catch (err) { $('syncStatus').textContent = 'Could not create gist: ' + err.message; }
+};
+$('pullBtn').onclick = async () => {
+  try { $('syncStatus').textContent = 'Pulling…'; await doPull(); $('syncStatus').textContent = 'Pulled and merged. Newer items won; local-only items were kept.'; }
+  catch (err) { $('syncStatus').textContent = 'Pull failed: ' + err.message; }
+};
+$('pushBtn').onclick = async () => {
+  try { $('syncStatus').textContent = 'Pushing…'; await doPush(); $('syncStatus').textContent = 'Pushed current data to the sync gist.'; }
+  catch (err) { $('syncStatus').textContent = 'Push failed: ' + err.message; }
+};
+$('syncNowBtn').onclick = async () => {
+  try { $('syncStatus').textContent = 'Syncing… (pull, then push)'; await doPull(); await doPush(); $('syncStatus').textContent = 'Synced: pulled and merged, then pushed the merged result.'; }
+  catch (err) { $('syncStatus').textContent = 'Sync failed: ' + err.message; }
+};
+$('exportBtn2').onclick = () => $('exportBtn').click();
+$('importBtn2').onclick = () => $('importBtn').click();
 $('exportBtn').onclick = () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kelly-planner.json'; a.click(); URL.revokeObjectURL(a.href);
@@ -465,8 +695,10 @@ $('importFile').onchange = (e) => {
     try {
       const data = JSON.parse(reader.result);
       if (!data || !Array.isArray(data.tasks) || !Array.isArray(data.habits)) throw new Error('bad file');
-      state = data; state.brain = state.brain || {}; save(); renderAll();
-      $('dataMsg').textContent = 'Imported. Your tasks, habits, notes and lists were replaced with the file.';
+      state = data; state.brain = state.brain || {}; state.dates = Array.isArray(state.dates) ? state.dates : [];
+      ['tasks', 'habits', 'notes', 'lists', 'dates'].forEach((col) => { if (!Array.isArray(state[col])) state[col] = []; state[col].forEach((item) => { if (item && !item.updatedAt) item.updatedAt = new Date().toISOString(); }); });
+      save(); renderAll();
+      $('dataMsg').textContent = 'Imported. Your tasks, habits, notes, lists, and dates were replaced with the file.';
     } catch (err) { $('dataMsg').textContent = 'That file could not be imported. Please choose a Kelly Planner JSON export.'; }
   };
   reader.readAsText(file); e.target.value = '';
