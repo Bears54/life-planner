@@ -78,6 +78,7 @@
   <h1>Kelly Planner</h1>
   <p class="sub">One calm place for tasks, your day, habits, notes, important dates, focus, and sync. No account. No paywall.</p>
 </header>
+<div id="reminderBanner" style="display:none;max-width:900px;margin:8px auto;padding:12px 16px;background:var(--pink);border:1px solid var(--rust);border-radius:14px"></div>
 
 <nav id="nav" aria-label="Planner sections">
   <button data-view="today" class="active">Today</button>
@@ -130,6 +131,17 @@
   <!-- TASKS -->
   <section id="view-tasks" class="view">
     <div class="card">
+      <h2>Reminders</h2>
+      <p class="small"><strong>Constant Reminder:</strong> when it is on, a task you ticked for constant reminders will keep reminding you — a banner, a sound, and a notification — until you mark it Done. It repeats at the interval below, and stops the moment the task is done.</p>
+      <div class="row">
+        <button type="button" id="enableNotifBtn">Enable notifications</button>
+        <div><label for="reminderInterval">Repeat every</label><select id="reminderInterval"><option value="1">1 minute</option><option value="5" selected>5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></div>
+        <div><label for="constantToggle">Constant reminders</label><select id="constantToggle"><option value="on">On</option><option value="off">Off</option></select></div>
+      </div>
+      <p class="small" id="reminderStatus"></p>
+      <p class="small">Honest limit: this is a web app with no server, so reminders can only ring while the app is open (or installed and running). It cannot wake a fully closed phone the way a built-in alarm app can. Keep the app open for constant reminders to keep coming.</p>
+    </div>
+    <div class="card">
       <h2>Voice Capture</h2>
       <p class="small">Tap the mic, speak a task out loud, check what it heard, then tap Save as task. You can edit it in the form below before saving, if you like.</p>
       <div class="row">
@@ -142,7 +154,8 @@
     <div class="card">
       <h2>Add a task</h2>
       <form id="taskForm">
-        <label for="tTitle">Title</label><input id="tTitle" required placeholder="e.g. Tidy the kitchen">
+        <label for="tTitle">Title</label><input id="tTitle" required placeholder="e.g. Call the pharmacy tomorrow at 3pm">
+        <p class="small" id="smartHint">Type a date or time in the title — like tomorrow, next Monday, or at 3pm — and it will be picked up automatically below.</p>
         <label for="tNotes">Notes</label><textarea id="tNotes" placeholder="Any details"></textarea>
         <div class="row">
           <div><label for="tAssignee">Assignee (who is doing this)</label><input id="tAssignee" placeholder="e.g. Kelly, or leave blank"></div>
@@ -159,7 +172,10 @@
         <div class="row">
           <div><label for="tStart">Start time</label><input type="time" id="tStart"></div>
           <div><label for="tDur">Duration (minutes)</label><input type="number" id="tDur" min="5" step="5" value="30"></div>
-          <div><label for="tRecur">Recurring</label><select id="tRecur"><option>None</option><option>Daily</option><option>Weekly</option></select></div>
+          <div><label for="tRecur">Recurring</label><select id="tRecur"><option>None</option><option>Daily</option><option>Weekly</option><option>Monthly</option><option>Yearly</option><option>Custom</option></select></div>
+          <div><label for="tRecurEvery">Repeat every (for Custom)</label><input type="number" id="tRecurEvery" min="1" value="2"></div>
+          <div><label for="tRecurUnit">Custom unit</label><select id="tRecurUnit"><option>Days</option><option>Weeks</option><option>Months</option><option>Years</option></select></div>
+          <div><label><input type="checkbox" id="tConstant" style="width:22px;height:22px;accent-color:#0F766E"> Constant reminder (keeps reminding until done)</label></div>
         </div>
         <p style="margin-top:12px"><button type="submit">Save task</button> <button type="button" class="secondary" id="taskReset">Clear form</button></p>
       </form>
@@ -485,6 +501,110 @@ function taskCard(t) {
     + '<button type="button" class="secondary smallbtn" data-del="' + t.id + '">Delete</button></div></div></div>';
 }
 function addDaysStr(ds, delta) { const d = new Date(ds + 'T12:00:00'); d.setDate(d.getDate() + delta); return localDateStr(d); }
+// Smart date/time recognition: "tomorrow", "next Monday", "in 3 days", "at 3pm", "Jan 5", "every Monday", etc.
+function parseSmart(text) {
+  const t = (text || '').toLowerCase();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let doDate = null, startTime = null, recurring = null;
+  const weekdays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  if (t.includes('today')) doDate = localDateStr(today);
+  if (t.includes('tomorrow')) { const d = new Date(today); d.setDate(d.getDate() + 1); doDate = localDateStr(d); }
+  let m = t.match(/in (\d+) days?/); if (m) { const d = new Date(today); d.setDate(d.getDate() + parseInt(m[1], 10)); doDate = localDateStr(d); }
+  m = t.match(/in (\d+) weeks?/); if (m) { const d = new Date(today); d.setDate(d.getDate() + parseInt(m[1], 10) * 7); doDate = localDateStr(d); }
+  if (t.includes('next week')) { const d = new Date(today); d.setDate(d.getDate() + 7); doDate = localDateStr(d); }
+  if (t.includes('next month')) { const d = new Date(today); d.setMonth(d.getMonth() + 1); doDate = localDateStr(d); }
+  weekdays.forEach((wd, idx) => {
+    if (t.includes('next ' + wd) || t.includes('every ' + wd)) {
+      let d = new Date(today); let add = (idx - d.getDay() + 7) % 7; if (add === 0) add = 7; d.setDate(d.getDate() + add); doDate = localDateStr(d);
+      if (t.includes('every ' + wd)) recurring = 'Weekly';
+    } else if (t.includes(wd) && !doDate) {
+      let d = new Date(today); let add = (idx - d.getDay() + 7) % 7; if (add === 0) add = 7; d.setDate(d.getDate() + add); doDate = localDateStr(d);
+    }
+  });
+  const months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  months.forEach((mo, idx) => {
+    const mm = t.match(new RegExp(mo + ' (\d{1,2})'));
+    if (mm) { let y = today.getFullYear(); let d = new Date(y, idx, parseInt(mm[1], 10)); if (d < today) d = new Date(y + 1, idx, parseInt(mm[1], 10)); doDate = localDateStr(d); }
+  });
+  m = t.match(/(?:at )?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/);
+  if (m) { let h = parseInt(m[1], 10); if (m[3] === 'pm' && h < 12) h += 12; if (m[3] === 'am' && h === 12) h = 0; startTime = String(h).padStart(2, '0') + ':' + (m[2] || '00'); }
+  else { m = t.match(/at (\d{1,2}):(\d{2})/); if (m) startTime = m[1].padStart(2, '0') + ':' + m[2]; }
+  if (t.includes('every day') || t.includes('daily')) recurring = 'Daily';
+  else if (t.includes('every week')) recurring = 'Weekly';
+  else if (t.includes('every month')) recurring = 'Monthly';
+  else if (t.includes('every year')) recurring = 'Yearly';
+  return { doDate, startTime, recurring };
+}
+function shiftDateStr(ds, unit, amount) {
+  if (!ds) return ds;
+  const d = new Date(ds + 'T12:00:00');
+  if (unit === 'Days') d.setDate(d.getDate() + amount);
+  else if (unit === 'Weeks') d.setDate(d.getDate() + amount * 7);
+  else if (unit === 'Months') { const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + amount); const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(day, dim)); }
+  else if (unit === 'Years') d.setFullYear(d.getFullYear() + amount);
+  return localDateStr(d);
+}
+function nextRecurring(t) {
+  const recur = t.recurring || 'None';
+  if (recur === 'None') return null;
+  let unit = 'Days', amount = 1;
+  if (recur === 'Daily') { unit = 'Days'; amount = 1; }
+  else if (recur === 'Weekly') { unit = 'Weeks'; amount = 1; }
+  else if (recur === 'Monthly') { unit = 'Months'; amount = 1; }
+  else if (recur === 'Yearly') { unit = 'Years'; amount = 1; }
+  else if (recur === 'Custom') { unit = t.recurUnit || 'Days'; amount = parseInt(t.recurEvery, 10) || 1; }
+  const clone = Object.assign({}, t, { id: uid(), status: 'Not Started', starred: false, isDemo: false });
+  clone.doDate = shiftDateStr(t.doDate, unit, amount);
+  clone.dueDate = shiftDateStr(t.dueDate, unit, amount);
+  return stamp(clone);
+}
+function maybeCloneRecurring(t, wasDone) {
+  if (!wasDone && t.status === 'Done' && (t.recurring || 'None') !== 'None') {
+    const next = nextRecurring(t);
+    if (next) state.tasks.push(next);
+  }
+}
+// Constant reminders: banner + sound + notification, repeating until Done, while the app is open.
+function reminderSettings() { try { return JSON.parse(localStorage.getItem('kelly-planner-reminders')) || { enabled: true, intervalMin: 5 }; } catch (e) { return { enabled: true, intervalMin: 5 }; } }
+function saveReminderSettings(x) { try { localStorage.setItem('kelly-planner-reminders', JSON.stringify(x)); } catch (e) {} }
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.25, 0.5].forEach((delay) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination); o.frequency.value = 880;
+      o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.18);
+    });
+  } catch (e) {}
+}
+function dueForReminder(t) {
+  if (t.status === 'Done' || !t.constantReminder) return false;
+  const todayStr = localDateStr(new Date());
+  if ((t.doDate || '') > todayStr) return false;
+  if (t.doDate === todayStr && t.startTime) {
+    const now = new Date(); const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (timeToMin(t.startTime) > nowMin) return false;
+  }
+  return true;
+}
+function checkReminders() {
+  const settings = reminderSettings();
+  const banner = $('reminderBanner'); if (!banner) return;
+  const due = state.tasks.filter(dueForReminder);
+  if (!settings.enabled || !due.length) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  banner.innerHTML = '<strong>⏰ Reminder — still to do:</strong> ' + due.map((t) => esc(t.title)).join(', ')
+    + '<div class="small">This keeps reminding you until you mark ' + (due.length === 1 ? 'it' : 'them') + ' Done. Tap a task in Tasks and tick it done to stop it.</div>';
+  try { if (window.Notification && Notification.permission === 'granted') new Notification('Kelly Planner reminder', { body: due.map((t) => t.title).join(', ') + ' — still to do.' }); } catch (e) {}
+  beep();
+}
+let reminderTimer = null;
+function startReminderTimer() {
+  if (reminderTimer) clearInterval(reminderTimer);
+  const settings = reminderSettings();
+  reminderTimer = setInterval(checkReminders, Math.max(1, settings.intervalMin) * 60000);
+  checkReminders();
+}
 function tasksForDay(dateStr) {
   return state.tasks.filter((t) => t.doDate === dateStr).sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
 }
@@ -511,7 +631,7 @@ function renderToday() {
 function bindTaskButtons(root) {
   if (!root) return;
   root.querySelectorAll('[data-done]').forEach((el) => {
-    el.onclick = (ev) => { ev.stopPropagation(); const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { t.status = t.status === 'Done' ? 'Not Started' : 'Done'; stamp(t); save(); renderAll(); } };
+    el.onclick = (ev) => { ev.stopPropagation(); const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { const wasDone = t.status === 'Done'; t.status = wasDone ? 'Not Started' : 'Done'; stamp(t); maybeCloneRecurring(t, wasDone); save(); renderAll(); } };
   });
   root.querySelectorAll('[data-select]').forEach((el) => {
     el.onclick = (ev) => { ev.stopPropagation(); selectTask(el.dataset.select); };
@@ -565,12 +685,14 @@ function renderTaskDetail() {
     + '<div class="row"><div><label>Do-date</label><input type="date" id="dDo" value="' + (t.doDate || '') + '"></div><div><label>Due-date</label><input type="date" id="dDue" value="' + (t.dueDate || '') + '"></div></div>'
     + '<label>Assignee</label><input id="dAssignee" value="' + esc(t.assignee || '').replace(/"/g, '&quot;') + '" placeholder="Who is doing this?">'
     + '<div class="row"><div><label>Start time</label><input type="time" id="dStart" value="' + (t.startTime || '') + '"></div><div><label>Duration (min)</label><input type="number" id="dDur" min="5" step="5" value="' + (t.duration || 30) + '"></div></div>'
+    + '<label><input type="checkbox" id="dConstant" style="width:22px;height:22px;accent-color:#0F766E"' + (t.constantReminder ? ' checked' : '') + '> Constant reminder (keeps reminding until done)</label>'
     + '<div class="row" style="margin-top:12px"><button type="button" id="dSave">Save changes</button><button type="button" class="secondary" id="dClose">Close</button><button type="button" class="secondary" id="dDel">Delete task</button></div>';
   $('dSave').onclick = () => {
+    const wasDone = t.status === 'Done';
     t.title = $('dTitle').value.trim() || t.title; t.notes = $('dNotes').value.trim();
     t.priority = $('dPri').value; t.status = $('dStatus').value;
     t.doDate = $('dDo').value || t.doDate; t.dueDate = $('dDue').value || t.dueDate; t.assignee = $('dAssignee').value.trim();
-    t.startTime = $('dStart').value; t.duration = parseInt($('dDur').value, 10) || t.duration;
+    t.startTime = $('dStart').value; t.duration = parseInt($('dDur').value, 10) || t.duration; t.constantReminder = $('dConstant').checked; maybeCloneRecurring(t, wasDone);
     stamp(t); save(); renderAll();
   };
   $('dClose').onclick = () => { selectedTaskId = null; renderTaskDetail(); };
@@ -1176,10 +1298,19 @@ $('voiceSaveBtn').onclick = () => {
   state.tasks.push(stamp({ id: uid(), title, notes: '', assignee: '', category: 'Personal', priority: 'Medium', status: 'Not Started', doDate: localDateStr(new Date()), dueDate: localDateStr(new Date()), startTime: '', duration: 30, recurring: 'None', starred: false, isDemo: false }));
   save(); $('voiceText').value = ''; $('voiceStatus').textContent = 'Saved as a task for today. You can change its date, priority, or details in Task details.'; renderAll();
 };
+$('tTitle').oninput = () => {
+  const parsed = parseSmart($('tTitle').value);
+  const parts = [];
+  if (parsed.doDate) parts.push('Do: ' + fmtDate(parsed.doDate));
+  if (parsed.startTime) parts.push('at ' + parsed.startTime);
+  if (parsed.recurring) parts.push('repeats ' + parsed.recurring);
+  $('smartHint').textContent = parts.length ? 'Heard: ' + parts.join(', ') + ' — leave the date/time fields blank to use these, or fill them in to override.' : 'Type a date or time in the title — like tomorrow, next Monday, or at 3pm — and it will be picked up automatically below.';
+};
 $('taskForm').onsubmit = (e) => {
   e.preventDefault();
   const title = $('tTitle').value.trim(); if (!title) return;
-  state.tasks.push(stamp({ id: uid(), title, notes: $('tNotes').value.trim(), assignee: $('tAssignee').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || localDateStr(new Date()), dueDate: $('tDue').value || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value, duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value, starred: false, isDemo: false }));
+  const parsed = parseSmart(title);
+  state.tasks.push(stamp({ id: uid(), title, notes: $('tNotes').value.trim(), assignee: $('tAssignee').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || parsed.doDate || localDateStr(new Date()), dueDate: $('tDue').value || parsed.doDate || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value || parsed.startTime || '', duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value !== 'None' ? $('tRecur').value : (parsed.recurring || 'None'), recurEvery: parseInt($('tRecurEvery').value, 10) || 2, recurUnit: $('tRecurUnit').value, constantReminder: $('tConstant').checked, starred: false, isDemo: false }));
   save(); e.target.reset(); $('tDur').value = 30; renderAll(); showView('tasks');
 };
 $('taskReset').onclick = () => { $('taskForm').reset(); $('tDur').value = 30; };
@@ -1245,6 +1376,16 @@ $('syncNowBtn').onclick = async () => {
   try { $('syncStatus').textContent = 'Syncing… (pull, then push)'; await doPull(); await doPush(); $('syncStatus').textContent = 'Synced: pulled and merged, then pushed the merged result.'; }
   catch (err) { $('syncStatus').textContent = 'Sync failed: ' + err.message; }
 };
+$('enableNotifBtn').onclick = async () => {
+  if (!window.Notification) { $('reminderStatus').textContent = 'Notifications are not supported in this browser, but the on-screen banner and sound will still repeat.'; return; }
+  try {
+    const perm = await Notification.requestPermission();
+    $('reminderStatus').textContent = perm === 'granted' ? 'Notifications allowed. Constant reminders will now ring, show a banner, and notify until a task is done.' : 'Notifications were not allowed. The on-screen banner and sound will still repeat while the app is open.';
+  } catch (e) { $('reminderStatus').textContent = 'Could not ask for notification permission. The banner and sound will still repeat.'; }
+  startReminderTimer();
+};
+$('reminderInterval').onchange = () => { const x = reminderSettings(); x.intervalMin = parseInt($('reminderInterval').value, 10) || 5; saveReminderSettings(x); startReminderTimer(); };
+$('constantToggle').onchange = () => { const x = reminderSettings(); x.enabled = $('constantToggle').value === 'on'; saveReminderSettings(x); startReminderTimer(); };
 $('exportBtn2').onclick = () => $('exportBtn').click();
 $('importBtn2').onclick = () => $('importBtn').click();
 $('exportBtn').onclick = () => {
@@ -1298,6 +1439,7 @@ $('btnReset').onclick = () => setTimer(timerTotal, timerMode);
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
+startReminderTimer();
 renderAll();
 </script>
 </body>
