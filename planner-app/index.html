@@ -130,6 +130,16 @@
   <!-- TASKS -->
   <section id="view-tasks" class="view">
     <div class="card">
+      <h2>Voice Capture</h2>
+      <p class="small">Tap the mic, speak a task out loud, check what it heard, then tap Save as task. You can edit it in the form below before saving, if you like.</p>
+      <div class="row">
+        <button type="button" id="voiceBtn">🎤 Start voice capture</button>
+        <button type="button" class="secondary" id="voiceSaveBtn">Save as task</button>
+      </div>
+      <label for="voiceText">What you said</label><textarea id="voiceText" placeholder="Tap the mic and speak, e.g. Call the pharmacy tomorrow"></textarea>
+      <p class="small" id="voiceStatus">Voice capture works in Chrome and Edge on Windows, and in Safari on newer iPhones. If your browser does not support it, the mic button will tell you, and you can type the task instead.</p>
+    </div>
+    <div class="card">
       <h2>Add a task</h2>
       <form id="taskForm">
         <label for="tTitle">Title</label><input id="tTitle" required placeholder="e.g. Tidy the kitchen">
@@ -1141,6 +1151,31 @@ function saveBrain() {
   save();
 }
 $('brainHead').onchange = saveBrain; $('brainEnergy').onchange = saveBrain;
+// Voice Capture — uses the browser's built-in speech recognition. Nothing is sent to a server by this app; recognition runs in the browser.
+let voiceRec = null, voiceListening = false;
+function voiceSupported() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+$('voiceBtn').onclick = () => {
+  if (!voiceSupported()) { $('voiceStatus').textContent = 'Voice capture is not supported in this browser. Try Chrome or Edge on Windows, or Safari on a newer iPhone — or type the task in the form below instead.'; return; }
+  if (voiceListening && voiceRec) { try { voiceRec.stop(); } catch (e) {} return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  voiceRec = new SR();
+  voiceRec.lang = 'en-US'; voiceRec.interimResults = true; voiceRec.continuous = false;
+  voiceRec.onstart = () => { voiceListening = true; $('voiceBtn').textContent = '⏹ Stop listening'; $('voiceStatus').textContent = 'Listening… speak now.'; };
+  voiceRec.onresult = (ev) => {
+    let text = '';
+    for (let i = 0; i < ev.results.length; i++) text += ev.results[i][0].transcript;
+    $('voiceText').value = text.trim();
+  };
+  voiceRec.onerror = (ev) => { $('voiceStatus').textContent = 'Could not hear that (' + (ev.error || 'error') + '). Try again, or type it below.'; voiceListening = false; $('voiceBtn').textContent = '🎤 Start voice capture'; };
+  voiceRec.onend = () => { voiceListening = false; $('voiceBtn').textContent = '🎤 Start voice capture'; if ($('voiceText').value.trim()) $('voiceStatus').textContent = 'Got it. Check the words above, then tap Save as task.'; };
+  try { voiceRec.start(); } catch (e) { $('voiceStatus').textContent = 'Voice capture could not start in this browser. You can type the task below instead.'; }
+};
+$('voiceSaveBtn').onclick = () => {
+  const title = $('voiceText').value.trim();
+  if (!title) { $('voiceStatus').textContent = 'Nothing to save yet — tap the mic and speak, or type in the box above.'; return; }
+  state.tasks.push(stamp({ id: uid(), title, notes: '', assignee: '', category: 'Personal', priority: 'Medium', status: 'Not Started', doDate: localDateStr(new Date()), dueDate: localDateStr(new Date()), startTime: '', duration: 30, recurring: 'None', starred: false, isDemo: false }));
+  save(); $('voiceText').value = ''; $('voiceStatus').textContent = 'Saved as a task for today. You can change its date, priority, or details in Task details.'; renderAll();
+};
 $('taskForm').onsubmit = (e) => {
   e.preventDefault();
   const title = $('tTitle').value.trim(); if (!title) return;
