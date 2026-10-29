@@ -1,5 +1,5 @@
 /* Kelly Planner service worker: cache-first app shell, offline-friendly. */
-const CACHE = 'kelly-planner-v3';
+const CACHE = 'kelly-planner-v4';
 const FILES = ['./index.html', './manifest.webmanifest', './icon.svg', './sw.js'];
 
 self.addEventListener('install', (event) => {

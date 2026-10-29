@@ -6,16 +6,16 @@
 <title>Kelly Planner</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#C05621">
+<meta name="theme-color" content="#0F766E">
 <style>
-  :root{--cream:#FFF8ED;--card:#FFFFFF;--rust:#C05621;--rust2:#9C4221;--brown:#3E2A1E;--muted:#7A5C4A;--peach:#FDEBD7;--sage:#E6EBDD;--pink:#F9DEDC;--line:#E8DCCB}
+  :root{--cream:#FFF1F3;--card:#FFFFFF;--rust:#0F766E;--rust2:#0B5E57;--brown:#233F3E;--muted:#5F7A7A;--peach:#FDE8EC;--sage:#D9F2EF;--pink:#F9C5D5;--line:#F0D6DB}
   *{box-sizing:border-box}
   body{margin:0;background:var(--cream);color:var(--brown);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.45}
   header{padding:18px 16px 8px;max-width:900px;margin:0 auto}
   h1{margin:0;font-size:30px} h2{font-size:22px;margin:18px 0 8px} h3{font-size:17px;margin:14px 0 6px}
   .sub{color:var(--muted)} .small{font-size:13px;color:var(--muted)}
   main{max-width:900px;margin:0 auto;padding:8px 16px 110px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 3px rgba(62,42,30,.06)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0;box-shadow:0 1px 3px rgba(15,118,110,.08)}
   .peach{background:var(--peach)} .sage{background:var(--sage)}
   label{display:block;font-size:13px;font-weight:700;margin:8px 0 3px}
   input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff}
@@ -345,7 +345,7 @@ function esc(s) {
 }
 function taskCard(t) {
   const starred = t.starred ? '★' : '☆';
-  return '<div class="task"><input type="checkbox" ' + (t.status === 'Done' ? 'checked' : '') + ' data-done="' + t.id + '" aria-label="Mark done" style="width:22px;height:22px;accent-color:#C05621;flex:0 0 auto">'
+  return '<div class="task"><input type="checkbox" ' + (t.status === 'Done' ? 'checked' : '') + ' data-done="' + t.id + '" aria-label="Mark done" style="width:22px;height:22px;accent-color:#0F766E;flex:0 0 auto">'
     + '<div style="flex:1"><div class="' + (t.status === 'Done' ? 'done' : '') + '"><strong>' + esc(t.title) + '</strong> '
     + '<span class="pill ' + (t.priority === 'High' ? 'high' : t.priority === 'Low' ? 'low' : '') + '">' + esc(t.priority) + '</span> '
     + '<span class="pill">' + esc(t.status) + '</span></div>'
@@ -483,7 +483,7 @@ function renderNotes() {
     el.onclick = () => { if (confirm('Delete this note?')) { recordDeletion(el.dataset.ndel); state.notes = state.notes.filter((x) => x.id !== el.dataset.ndel); save(); renderNotes(); } };
   });
   $('listArea').innerHTML = state.lists.length ? state.lists.map((l) => '<div class="card"><strong>' + esc(l.title) + '</strong>'
-    + l.items.map((it) => '<div class="task"><input type="checkbox" ' + (it.done ? 'checked' : '') + ' data-item="' + l.id + ':' + it.id + '" style="width:22px;height:22px;accent-color:#C05621">'
+    + l.items.map((it) => '<div class="task"><input type="checkbox" ' + (it.done ? 'checked' : '') + ' data-item="' + l.id + ':' + it.id + '" style="width:22px;height:22px;accent-color:#0F766E">'
     + '<span class="' + (it.done ? 'done' : '') + '">' + esc(it.text) + '</span></div>').join('')
     + '<div class="row" style="margin-top:8px"><input data-newitem="' + l.id + '" placeholder="Add an item"><button type="button" class="secondary smallbtn" data-additem="' + l.id + '">Add item</button>'
     + '<button type="button" class="secondary smallbtn" data-ldel="' + l.id + '">Delete list</button></div></div>').join('') : '<p>No lists yet.</p>';

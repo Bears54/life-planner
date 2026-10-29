@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kelly Planner icon">
-  <rect x="32" y="32" width="448" height="448" rx="96" fill="#C05621"/>
-  <rect x="72" y="120" width="368" height="320" rx="32" fill="#FFF8ED"/>
-  <rect x="72" y="120" width="368" height="72" rx="32" fill="#E8A87C"/>
-  <rect x="72" y="168" width="368" height="24" fill="#E8A87C"/>
-  <circle cx="160" cy="96" r="22" fill="#FFF8ED"/>
-  <circle cx="352" cy="96" r="22" fill="#FFF8ED"/>
-  <path d="M170 300 L235 365 L350 235" fill="none" stroke="#5C3A21" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="#0F766E"/>
+  <rect x="72" y="120" width="368" height="320" rx="32" fill="#FFF1F3"/>
+  <rect x="72" y="120" width="368" height="72" rx="32" fill="#F9A8C0"/>
+  <rect x="72" y="168" width="368" height="24" fill="#F9A8C0"/>
+  <circle cx="160" cy="96" r="22" fill="#FFF1F3"/>
+  <circle cx="352" cy="96" r="22" fill="#FFF1F3"/>
+  <path d="M170 300 L235 365 L350 235" fill="none" stroke="#0B5E57" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
