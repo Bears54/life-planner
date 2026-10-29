@@ -53,6 +53,12 @@
   .sidebtn.active{background:var(--peach);color:var(--rust)}
   #sideLists{display:none}
   #tasksLayout{display:block}
+  .splitgrid{display:grid;gap:16px}
+  #notesLayout{display:block}
+  @media(min-width:900px){
+    .splitgrid{grid-template-columns:1fr 1fr}
+    #notesLayout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  }
   @media(min-width:900px){
     #sideLists{display:block;width:100%}
     nav{flex-direction:column;justify-content:flex-start;align-items:stretch;overflow-y:auto}
@@ -102,11 +108,8 @@
       <label for="dayPicker">Day</label>
       <input type="date" id="dayPicker">
       <p class="small" id="dayLabel"></p>
-      <div class="row">
-        <div><label>Brain Weather — head (1–5)</label><input type="number" id="brainHead" min="1" max="5" step="1"></div>
-        <div><label>Brain Weather — energy (1–5)</label><input type="number" id="brainEnergy" min="1" max="5" step="1"></div>
-      </div>
-      <p class="small">Optional. 1 = low, 5 = high. Saved for this day only.</p>
+      <div><label>Brain Weather — energy (1–5)</label><input type="number" id="brainEnergy" min="1" max="5" step="1"></div>
+      <p class="small">Optional. 1 = low, 5 = high. Saved for this day only. The head rating is removed.</p>
     </div>
 
     <div class="card peach">
@@ -290,6 +293,7 @@
           <label><input type="checkbox" value="1"> Mon</label><label><input type="checkbox" value="2"> Tue</label><label><input type="checkbox" value="3"> Wed</label><label><input type="checkbox" value="4"> Thu</label><label><input type="checkbox" value="5"> Fri</label><label><input type="checkbox" value="6"> Sat</label><label><input type="checkbox" value="0"> Sun</label>
         </div></div>
         <p style="margin-top:12px"><button type="submit">Save habit</button></p>
+        <p class="small" id="habitMsg"></p>
       </form>
     </div>
     <div class="card">
@@ -306,7 +310,7 @@
 
   <!-- NOTES / LISTS -->
   <section id="view-notes" class="view">
-    <div class="card">
+    <div id="notesLayout"><div class="card">
       <h2>Add a note</h2>
       <form id="noteForm">
         <label for="nTitle">Title</label><input id="nTitle" required>
@@ -322,7 +326,7 @@
         <button type="submit">Add list</button>
       </form>
       <div id="listArea"></div>
-    </div>
+    </div></div>
   </section>
 
   <!-- FOCUS -->
@@ -612,7 +616,6 @@ function renderToday() {
   $('dayPicker').value = selectedDate;
   $('dayLabel').textContent = fmtDate(selectedDate);
   const bw = (state.brain && state.brain[selectedDate]) || {};
-  $('brainHead').value = bw.head || '';
   $('brainEnergy').value = bw.energy || '';
   const dayTasks = tasksForDay(selectedDate);
   const open = dayTasks.filter((t) => t.status !== 'Done');
@@ -798,7 +801,7 @@ function renderSplit() {
     + (slots.length ? slots.map((sl) => '<button type="button" class="secondary smallbtn" data-slotday="' + splitDay + '" data-slottime="' + minToTime(sl.from) + '" style="margin:2px">Free ' + minToTime(sl.from) + '–' + minToTime(sl.to) + ' (drop a task here)</button>').join(' ') : '<p class="small">No open slots that day.</p>')
     + '<div style="margin-top:10px">' + (dayTasks.length ? dayTasks.map((t) => '<div class="block">' + esc(t.startTime || 'Anytime') + ' — ' + esc(t.title) + ' <span class="pill">' + esc(t.status) + '</span></div>').join('') : '<p class="small">Nothing scheduled that day yet.</p>') + '</div></div>';
   const calHtml = '<div><h3>' + calCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) + '</h3><p class="small">Tap a day to pick it. Drop a task on a day to schedule it there.</p>' + splitMonthHtml() + '</div>';
-  if (splitMode === 'list') body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">' + taskListHtml + '<div>' + calHtml + dayHtml + '</div></div>';
+  if (splitMode === 'list') body.innerHTML = '<div class="splitgrid">' + taskListHtml + '<div>' + calHtml + dayHtml + '</div></div>';
   else body.innerHTML = '<div>' + calHtml + '</div><div style="margin-top:16px">' + dayHtml + '</div><div style="margin-top:16px">' + taskListHtml + '</div>';
   body.querySelectorAll('[data-splittask]').forEach((card) => {
     card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.splittask); });
@@ -1041,6 +1044,8 @@ function renderLibrary() {
       const preset = habitLibraryList().find((x) => x.name === b.dataset.lib); if (!preset) return;
       state.habits.push(stamp({ id: uid(), name: preset.name, tiny: preset.tiny, checks: {}, freq: 'Daily', track: preset.track, target: 3, days: [] }));
       save(); renderHabits();
+      const msg = $('habitMsg'); if (msg) msg.textContent = 'Added: ' + preset.name + ' — see it in This week below.';
+      const list = $('habitList'); if (list) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
   });
 }
@@ -1267,12 +1272,12 @@ function showView(name) {
 document.querySelectorAll('#nav button').forEach((b) => { b.onclick = () => showView(b.dataset.view); });
 $('dayPicker').onchange = (e) => { selectedDate = e.target.value || selectedDate; calCursor = new Date(selectedDate + 'T12:00:00'); renderToday(); renderCalendar(); };
 function saveBrain() {
-  const head = parseInt($('brainHead').value, 10), energy = parseInt($('brainEnergy').value, 10);
+  const energy = parseInt($('brainEnergy').value, 10);
   state.brain = state.brain || {};
-  state.brain[selectedDate] = { head: head >= 1 && head <= 5 ? head : '', energy: energy >= 1 && energy <= 5 ? energy : '' };
+  state.brain[selectedDate] = { energy: energy >= 1 && energy <= 5 ? energy : '' };
   save();
 }
-$('brainHead').onchange = saveBrain; $('brainEnergy').onchange = saveBrain;
+$('brainEnergy').onchange = saveBrain;
 // Voice Capture — uses the browser's built-in speech recognition. Nothing is sent to a server by this app; recognition runs in the browser.
 let voiceRec = null, voiceListening = false;
 function voiceSupported() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
@@ -1341,6 +1346,7 @@ $('habitForm').onsubmit = (e) => {
   const days = [...document.querySelectorAll('#hDays input:checked')].map((x) => parseInt(x.value, 10));
   state.habits.push(stamp({ id: uid(), name, tiny: $('hTiny').value.trim(), checks: {}, freq: $('hFreq').value, track: $('hTrack').value, target: parseInt($('hTarget').value, 10) || 3, days }));
   save(); e.target.reset(); $('hDaysRow').style.display = 'none'; renderHabits();
+  const msg = $('habitMsg'); if (msg) msg.textContent = 'Added: ' + name + ' — see it in This week below.';
 };
 $('noteForm').onsubmit = (e) => { e.preventDefault(); const title = $('nTitle').value.trim(); if (!title) return; state.notes.push(stamp({ id: uid(), title, body: $('nBody').value.trim() })); save(); e.target.reset(); renderNotes(); };
 $('listForm').onsubmit = (e) => { e.preventDefault(); const title = $('lTitle').value.trim(); if (!title) return; state.lists.push(stamp({ id: uid(), title, items: [] })); save(); e.target.reset(); renderNotes(); };
