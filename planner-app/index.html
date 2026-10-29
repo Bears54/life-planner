@@ -285,7 +285,7 @@
         <button type="button" id="exportBtn2">Export JSON</button>
         <button type="button" class="secondary" id="importBtn2">Import JSON</button>
       </div>
-      <p class="small">How merging works on Pull / Sync Now: for tasks, habits, notes, lists, and dates, the newer item (by its last-edited time) wins. Local items are not silently deleted — an item that exists only on this device is kept.</p>
+      <p class="small">How merging works on Pull / Sync Now: for tasks, habits, notes, lists, and dates, the newer item (by its last-edited time) wins. Local items are not silently deleted — an item that exists only on this device is kept. Items you delete are remembered, so a deleted item is not brought back by another device.</p>
     </div>
   </section>
 </main>
@@ -317,7 +317,8 @@ function seed() {
     notes: [{ id: uid(), title: 'Welcome', body: 'This is your calm planner. Add notes here, and use Tasks for your day.' }],
     lists: [{ id: uid(), title: 'Groceries', items: [{ id: uid(), text: 'Milk', done: false }] }],
     dates: [],
-    brain: {}
+    brain: {},
+    deleted: {}
   };
 }
 let state;
@@ -328,6 +329,8 @@ try {
 } catch (e) { state = seed(); }
 // Migrate older saves: ensure dates exist and every item has an updatedAt timestamp.
 state.dates = Array.isArray(state.dates) ? state.dates : [];
+state.deleted = (state.deleted && typeof state.deleted === 'object') ? state.deleted : {};
+function recordDeletion(id) { state.deleted[id] = new Date().toISOString(); }
 ['tasks', 'habits', 'notes', 'lists', 'dates'].forEach((col) => {
   if (!Array.isArray(state[col])) state[col] = [];
   state[col].forEach((item) => { if (item && !item.updatedAt) item.updatedAt = new Date().toISOString(); });
@@ -390,7 +393,7 @@ function bindTaskButtons(root) {
     };
   });
   root.querySelectorAll('[data-del]').forEach((el) => {
-    el.onclick = () => { if (confirm('Delete this task?')) { state.tasks = state.tasks.filter((x) => x.id !== el.dataset.del); save(); renderAll(); } };
+    el.onclick = () => { if (confirm('Delete this task?')) { recordDeletion(el.dataset.del); state.tasks = state.tasks.filter((x) => x.id !== el.dataset.del); save(); renderAll(); } };
   });
   root.querySelectorAll('[data-edit]').forEach((el) => {
     el.onclick = () => {
@@ -470,14 +473,14 @@ function renderHabits() {
     el.onchange = () => { const h = state.habits.find((x) => x.id === el.dataset.habit); if (h) { h.checks = h.checks || {}; h.checks[el.dataset.day] = el.checked; stamp(h); save(); renderHabits(); } };
   });
   $('habitList').querySelectorAll('[data-hdel]').forEach((el) => {
-    el.onclick = () => { if (confirm('Delete this habit?')) { state.habits = state.habits.filter((x) => x.id !== el.dataset.hdel); save(); renderHabits(); } };
+    el.onclick = () => { if (confirm('Delete this habit?')) { recordDeletion(el.dataset.hdel); state.habits = state.habits.filter((x) => x.id !== el.dataset.hdel); save(); renderHabits(); } };
   });
 }
 function renderNotes() {
   $('noteList').innerHTML = state.notes.length ? state.notes.map((n) => '<div class="card"><strong>' + esc(n.title) + '</strong><p>' + esc(n.body) + '</p>'
     + '<button type="button" class="secondary smallbtn" data-ndel="' + n.id + '">Delete note</button></div>').join('') : '<p>No notes yet.</p>';
   $('noteList').querySelectorAll('[data-ndel]').forEach((el) => {
-    el.onclick = () => { if (confirm('Delete this note?')) { state.notes = state.notes.filter((x) => x.id !== el.dataset.ndel); save(); renderNotes(); } };
+    el.onclick = () => { if (confirm('Delete this note?')) { recordDeletion(el.dataset.ndel); state.notes = state.notes.filter((x) => x.id !== el.dataset.ndel); save(); renderNotes(); } };
   });
   $('listArea').innerHTML = state.lists.length ? state.lists.map((l) => '<div class="card"><strong>' + esc(l.title) + '</strong>'
     + l.items.map((it) => '<div class="task"><input type="checkbox" ' + (it.done ? 'checked' : '') + ' data-item="' + l.id + ':' + it.id + '" style="width:22px;height:22px;accent-color:#C05621">'
@@ -495,7 +498,7 @@ function renderNotes() {
     };
   });
   $('listArea').querySelectorAll('[data-ldel]').forEach((el) => {
-    el.onclick = () => { if (confirm('Delete this list?')) { state.lists = state.lists.filter((x) => x.id !== el.dataset.ldel); save(); renderNotes(); } };
+    el.onclick = () => { if (confirm('Delete this list?')) { recordDeletion(el.dataset.ldel); state.lists = state.lists.filter((x) => x.id !== el.dataset.ldel); save(); renderNotes(); } };
   });
 }
 // ---- Important Dates ----
@@ -551,7 +554,7 @@ function renderDates() {
     };
   });
   document.querySelectorAll('[data-ddel]').forEach((el) => {
-    el.onclick = () => { if (confirm('Delete this date?')) { state.dates = state.dates.filter((x) => x.id !== el.dataset.ddel); save(); renderDates(); renderCalendar(); } };
+    el.onclick = () => { if (confirm('Delete this date?')) { recordDeletion(el.dataset.ddel); state.dates = state.dates.filter((x) => x.id !== el.dataset.ddel); save(); renderDates(); renderCalendar(); } };
   });
 }
 // ---- Sync (GitHub Gist, client-side only) ----
@@ -560,7 +563,7 @@ const SYNC_KEY = 'kelly-planner-sync';
 function getSyncMeta() { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; } catch (e) { return {}; } }
 function setSyncMeta(meta) { try { localStorage.setItem(SYNC_KEY, JSON.stringify(meta)); } catch (e) {} }
 function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
-function exportableState() { return { tasks: state.tasks, habits: state.habits, notes: state.notes, lists: state.lists, dates: state.dates, brain: state.brain || {} }; }
+function exportableState() { return { tasks: state.tasks, habits: state.habits, notes: state.notes, lists: state.lists, dates: state.dates, brain: state.brain || {}, deleted: state.deleted || {} }; }
 function renderSyncStatus() {
   const meta = getSyncMeta();
   const tokenEl = $('gistToken'); if (tokenEl && document.activeElement !== tokenEl) tokenEl.value = getToken();
@@ -582,12 +585,23 @@ async function gistCall(path, method, body) {
 }
 function mergeRemote(remote) {
   if (!remote || typeof remote !== 'object') throw new Error('The gist did not contain planner data.');
+  state.deleted = state.deleted || {};
+  if (remote.deleted && typeof remote.deleted === 'object') {
+    Object.keys(remote.deleted).forEach((id) => {
+      if (!state.deleted[id] || remote.deleted[id] > state.deleted[id]) state.deleted[id] = remote.deleted[id];
+    });
+  }
   ['tasks', 'habits', 'notes', 'lists', 'dates'].forEach((col) => {
     if (!Array.isArray(remote[col])) return;
-    const local = state[col] || [];
+    let local = (state[col] || []).filter((x) => {
+      const delAt = state.deleted[x.id];
+      return !delAt || (x.updatedAt || '') > delAt;
+    });
     const byId = new Map(local.map((x) => [x.id, x]));
     remote[col].forEach((item) => {
       if (!item || !item.id) return;
+      const delAt = state.deleted[item.id];
+      if (delAt && (item.updatedAt || '') <= delAt) return;
       const existing = byId.get(item.id);
       if (!existing) { local.push(item); }
       else if ((item.updatedAt || '') > (existing.updatedAt || '')) { Object.assign(existing, item); }
