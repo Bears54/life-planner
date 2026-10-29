@@ -83,6 +83,8 @@
   <button data-view="today" class="active">Today</button>
   <button data-view="tasks">Tasks</button>
   <button data-view="board">Board</button>
+  <button data-view="split">Split</button>
+  <button data-view="matrix">Matrix</button>
   <button data-view="calendar">Calendar</button>
   <button data-view="habits">Habits</button>
   <button data-view="notes">Notes</button>
@@ -192,6 +194,36 @@
         <div><label for="boardSort">Sort cards by</label><select id="boardSort"><option value="due">Due date</option><option value="priority">Priority</option><option value="start">Start time</option><option value="title">Title</option></select></div>
       </div>
       <div id="board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- SPLIT: TASKS + CALENDAR SIDE BY SIDE -->
+  <section id="view-split" class="view">
+    <div class="card">
+      <h2>Tasks + Calendar, side by side</h2>
+      <p class="small">No more switching back and forth. Drag a task onto a calendar day to schedule it, or onto a category below to move it to that list. In Calendar-first mode, drag a task onto an open time slot to fill it.</p>
+      <div class="row">
+        <button type="button" id="splitListBtn">List-first</button>
+        <button type="button" class="secondary" id="splitCalBtn">Calendar-first</button>
+        <button type="button" class="secondary smallbtn" id="splitPrev">‹ Month</button>
+        <button type="button" class="secondary smallbtn" id="splitNext">Month ›</button>
+      </div>
+      <div class="row" id="splitCats" style="margin-top:10px"></div>
+      <div id="splitBody" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- EISENHOWER MATRIX -->
+  <section id="view-matrix" class="view">
+    <div class="card">
+      <h2>Eisenhower Matrix</h2>
+      <p class="small">Important = High priority. Urgent = due within 2 days, or overdue. Drag a card to another quadrant — that changes its priority and due date to match the new quadrant.</p>
+      <div class="row">
+        <div><label for="matrixCat">Filter by category</label><select id="matrixCat"><option>All</option></select></div>
+        <div><label for="matrixAssignee">Filter by assignee</label><select id="matrixAssignee"><option>All</option></select></div>
+        <div><label for="matrixHideDone">Hide done tasks?</label><select id="matrixHideDone"><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+      <div id="matrixBody" style="margin-top:12px"></div>
     </div>
   </section>
 
@@ -586,6 +618,119 @@ function renderBoard() {
     });
   });
 }
+let splitMode = 'list';
+let splitDay = localDateStr(new Date());
+function timeToMin(t) { if (!t) return null; const parts = t.split(':'); return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10); }
+function minToTime(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+function freeSlots(ds) {
+  const dayTasks = tasksForDay(ds).filter((t) => t.startTime).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+  const slots = [];
+  let cursor = 8 * 60;
+  dayTasks.forEach((t) => {
+    const st = timeToMin(t.startTime), en = st + (t.duration || 30);
+    if (st > cursor) slots.push({ from: cursor, to: st });
+    cursor = Math.max(cursor, en);
+  });
+  if (cursor < 20 * 60) slots.push({ from: cursor, to: 20 * 60 });
+  return slots;
+}
+function splitMonthHtml() {
+  const y = calCursor.getFullYear(), m = calCursor.getMonth();
+  const first = new Date(y, m, 1);
+  const startOffset = (first.getDay() + 6) % 7;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  let html = '<div class="week"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div><div class="cal">';
+  for (let i = 0; i < startOffset; i++) html += '<span></span>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = localDateStr(new Date(y, m, d));
+    const count = state.tasks.filter((t) => t.doDate === ds).length;
+    html += '<button type="button" data-splitday="' + ds + '" class="' + (count ? 'has' : '') + (ds === splitDay ? ' sel' : '') + '">' + d + (count ? '<br><small>' + count + '</small>' : '') + '</button>';
+  }
+  html += '</div>';
+  return html;
+}
+function splitTaskCard(t) {
+  return '<div draggable="true" data-splittask="' + t.id + '" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;cursor:grab"><strong>' + esc(t.title) + '</strong>'
+    + '<div class="small">Due ' + fmtDate(t.dueDate) + ' · ' + esc(t.priority) + ' · ' + esc(t.category || '—') + (t.assignee ? ' · For: ' + esc(t.assignee) : '') + '</div></div>';
+}
+function renderSplit() {
+  const body = $('splitBody'); if (!body) return;
+  const cats = [...new Set(state.tasks.map((t) => t.category).filter(Boolean))].sort();
+  $('splitCats').innerHTML = cats.map((c) => '<span data-splitcat="' + esc(c) + '" style="padding:6px 12px;border:1px dashed var(--rust);border-radius:999px;font-size:13px;font-weight:700">Drop here: ' + esc(c) + '</span>').join('');
+  const openTasks = state.tasks.filter((t) => t.status !== 'Done').sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+  const taskListHtml = '<div><h3>To-dos (drag one to a day)</h3>' + (openTasks.length ? openTasks.map(splitTaskCard).join('') : '<p class="small">No open tasks. Add one in Tasks.</p>') + '</div>';
+  const dayTasks = tasksForDay(splitDay);
+  const slots = freeSlots(splitDay);
+  const dayHtml = '<div><h3>' + fmtDate(splitDay) + '</h3>'
+    + '<p class="small">Open time slots (8am–8pm, between tasks):</p>'
+    + (slots.length ? slots.map((sl) => '<button type="button" class="secondary smallbtn" data-slotday="' + splitDay + '" data-slottime="' + minToTime(sl.from) + '" style="margin:2px">Free ' + minToTime(sl.from) + '–' + minToTime(sl.to) + ' (drop a task here)</button>').join(' ') : '<p class="small">No open slots that day.</p>')
+    + '<div style="margin-top:10px">' + (dayTasks.length ? dayTasks.map((t) => '<div class="block">' + esc(t.startTime || 'Anytime') + ' — ' + esc(t.title) + ' <span class="pill">' + esc(t.status) + '</span></div>').join('') : '<p class="small">Nothing scheduled that day yet.</p>') + '</div></div>';
+  const calHtml = '<div><h3>' + calCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) + '</h3><p class="small">Tap a day to pick it. Drop a task on a day to schedule it there.</p>' + splitMonthHtml() + '</div>';
+  if (splitMode === 'list') body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">' + taskListHtml + '<div>' + calHtml + dayHtml + '</div></div>';
+  else body.innerHTML = '<div>' + calHtml + '</div><div style="margin-top:16px">' + dayHtml + '</div><div style="margin-top:16px">' + taskListHtml + '</div>';
+  body.querySelectorAll('[data-splittask]').forEach((card) => {
+    card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.splittask); });
+    card.onclick = () => selectTask(card.dataset.splittask);
+  });
+  function bindDrop(el, fn) {
+    el.addEventListener('dragover', (e) => e.preventDefault());
+    el.addEventListener('drop', (e) => { e.preventDefault(); const t = state.tasks.find((x) => x.id === e.dataTransfer.getData('text/plain')); if (t) { fn(t); stamp(t); save(); renderAll(); } });
+  }
+  body.querySelectorAll('[data-splitday]').forEach((btn) => {
+    btn.onclick = () => { splitDay = btn.dataset.splitday; renderSplit(); };
+    bindDrop(btn, (t) => { const ds = btn.dataset.splitday; t.doDate = ds; if (t.dueDate && t.dueDate < ds) t.dueDate = ds; });
+  });
+  body.querySelectorAll('[data-slotday]').forEach((btn) => {
+    bindDrop(btn, (t) => { t.doDate = btn.dataset.slotday; t.startTime = btn.dataset.slottime; if (t.dueDate && t.dueDate < btn.dataset.slotday) t.dueDate = btn.dataset.slotday; });
+  });
+  $('splitCats').querySelectorAll('[data-splitcat]').forEach((chip) => {
+    bindDrop(chip, (t) => { t.category = chip.dataset.splitcat; });
+  });
+}
+function renderMatrix() {
+  const body = $('matrixBody'); if (!body) return;
+  const cats = [...new Set(state.tasks.map((t) => t.category).filter(Boolean))].sort();
+  const assignees = [...new Set(state.tasks.map((t) => t.assignee).filter(Boolean))].sort();
+  const catSel = $('matrixCat'), curCat = catSel.value;
+  catSel.innerHTML = '<option>All</option>' + cats.map((c) => '<option' + (c === curCat ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
+  const asSel = $('matrixAssignee'), curAs = asSel.value;
+  asSel.innerHTML = '<option>All</option>' + assignees.map((a) => '<option' + (a === curAs ? ' selected' : '') + '>' + esc(a) + '</option>').join('');
+  const todayStr = localDateStr(new Date());
+  const filtered = state.tasks.filter((t) =>
+    (catSel.value === 'All' || t.category === catSel.value)
+    && (asSel.value === 'All' || t.assignee === asSel.value)
+    && ($('matrixHideDone').value !== 'yes' || t.status !== 'Done'));
+  const quadrants = [
+    { key: 'do', title: 'Do now', strategy: 'Urgent + Important — do it first, today.', test: (t) => t.priority === 'High' && t.dueDate && t.dueDate <= addDaysStr(todayStr, 2) },
+    { key: 'schedule', title: 'Schedule it', strategy: 'Important, not urgent — put it in your calendar so it does not become urgent.', test: (t) => t.priority === 'High' && !(t.dueDate && t.dueDate <= addDaysStr(todayStr, 2)) },
+    { key: 'delegate', title: 'Delegate it', strategy: 'Urgent, less important — hand it to someone else, or do a tiny version.', test: (t) => t.priority !== 'High' && t.dueDate && t.dueDate <= addDaysStr(todayStr, 2) },
+    { key: 'eliminate', title: 'Eliminate / later', strategy: 'Neither urgent nor important — drop it, or leave it for a quiet day.', test: (t) => t.priority !== 'High' && !(t.dueDate && t.dueDate <= addDaysStr(todayStr, 2)) }
+  ];
+  body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px">'
+    + quadrants.map((q) => {
+      const cards = filtered.filter(q.test);
+      return '<div data-matrixcol="' + q.key + '" style="background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:10px;min-height:140px"><strong>' + q.title + ' (' + cards.length + ')</strong><div class="small">' + q.strategy + '</div>'
+        + cards.map((t) => '<div draggable="true" data-matrixtask="' + t.id + '" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;cursor:grab"><strong>' + esc(t.title) + '</strong><div class="small">Due ' + fmtDate(t.dueDate) + ' · ' + esc(t.priority) + (t.assignee ? ' · For: ' + esc(t.assignee) : '') + '</div></div>').join('')
+        + (cards.length ? '' : '<p class="small">Drop a card here.</p>') + '</div>';
+    }).join('') + '</div><p class="small">How to read it: first work through Do now, then the tasks you scheduled. Delegate is where the Assignee field helps — set who it is for in the task details.</p>';
+  body.querySelectorAll('[data-matrixtask]').forEach((card) => {
+    card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.matrixtask); });
+    card.onclick = () => selectTask(card.dataset.matrixtask);
+  });
+  body.querySelectorAll('[data-matrixcol]').forEach((col) => {
+    col.addEventListener('dragover', (e) => e.preventDefault());
+    col.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const t = state.tasks.find((x) => x.id === e.dataTransfer.getData('text/plain')); if (!t) return;
+      const key = col.dataset.matrixcol;
+      if (key === 'do') { t.priority = 'High'; t.dueDate = todayStr; }
+      else if (key === 'schedule') { t.priority = 'High'; if (!t.dueDate || t.dueDate <= todayStr) t.dueDate = addDaysStr(todayStr, 7); }
+      else if (key === 'delegate') { t.priority = 'Medium'; if (!t.dueDate || t.dueDate > todayStr) t.dueDate = todayStr; }
+      else { t.priority = 'Low'; t.dueDate = addDaysStr(todayStr, 30); }
+      stamp(t); save(); renderAll();
+    });
+  });
+}
 function renderCalendar() {
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   $('calTitle').textContent = calCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -973,7 +1118,7 @@ async function doPush() {
   await gistCall('/gists/' + meta.gistId, 'PATCH', { files: { 'kelly-planner-sync.json': { content: JSON.stringify(exportableState(), null, 2) } } });
   meta.lastSync = new Date().toISOString(); setSyncMeta(meta); renderSyncStatus();
 }
-function renderAll() { renderToday(); renderTasks(); renderBoard(); renderCalendar(); renderHabits(); renderNotes(); renderDates(); renderSyncStatus(); }
+function renderAll() { renderToday(); renderTasks(); renderBoard(); renderSplit(); renderMatrix(); renderCalendar(); renderHabits(); renderNotes(); renderDates(); renderSyncStatus(); }
 function showView(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   const el = $('view-' + name); if (el) el.classList.add('active');
@@ -981,6 +1126,8 @@ function showView(name) {
   if (name === 'today') renderToday();
   if (name === 'calendar') renderCalendar();
   if (name === 'board') renderBoard();
+  if (name === 'split') renderSplit();
+  if (name === 'matrix') renderMatrix();
   if (name === 'dates') renderDates();
   if (name === 'sync') renderSyncStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1017,6 +1164,11 @@ $('calPrev').onclick = () => calStep(-1);
 $('calNext').onclick = () => calStep(1);
 $('calMode').onchange = (e) => { calMode = e.target.value; renderCalendar(); };
 $('boardGroup').onchange = renderBoard; $('boardSort').onchange = renderBoard;
+$('splitListBtn').onclick = () => { splitMode = 'list'; renderSplit(); };
+$('splitCalBtn').onclick = () => { splitMode = 'calendar'; renderSplit(); };
+$('splitPrev').onclick = () => { calCursor.setMonth(calCursor.getMonth() - 1); renderSplit(); };
+$('splitNext').onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderSplit(); };
+$('matrixCat').onchange = renderMatrix; $('matrixAssignee').onchange = renderMatrix; $('matrixHideDone').onchange = renderMatrix;
 $('hFreq').onchange = () => { $('hDaysRow').style.display = $('hFreq').value === 'Custom days' ? 'block' : 'none'; };
 $('habitForm').onsubmit = (e) => {
   e.preventDefault(); const name = $('hName').value.trim(); if (!name) return;
