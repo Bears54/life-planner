@@ -41,12 +41,35 @@
   nav button{background:#fff;color:var(--brown);padding:10px 2px;min-height:44px;flex:1;font-size:13px}
   nav button.active{background:var(--rust);color:#fff}
   .view{display:none} .view.active{display:block}
+  .roundcheck{width:28px;height:28px;min-height:28px;padding:0;border-radius:50%;border:2px solid var(--rust);background:#fff;color:var(--rust);font-size:16px;line-height:1;flex:0 0 auto}
+  .roundcheck.on{background:var(--rust);color:#fff}
+  .taskrow{cursor:pointer} .taskrow:hover{background:#FFF7F8}
+  .tasktitle{font-size:16px}
+  .metaline{font-size:13px;color:var(--muted);margin-top:2px}
+  .duechip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;background:var(--peach)}
+  .duechip.overdue{background:var(--pink)}
+  .sidehead{font-size:12px;font-weight:800;letter-spacing:.08em;color:var(--muted);padding:14px 16px 4px}
+  .sidebtn{display:block;width:100%;text-align:left;background:transparent;color:var(--brown);border:0;border-radius:10px;padding:10px 16px;min-height:42px;font-weight:600}
+  .sidebtn.active{background:var(--peach);color:var(--rust)}
+  #sideLists{display:none}
+  #tasksLayout{display:block}
+  @media(min-width:900px){
+    #sideLists{display:block;width:100%}
+    nav{flex-direction:column;justify-content:flex-start;align-items:stretch;overflow-y:auto}
+    nav button{flex:none;text-align:left;padding:12px 16px}
+    #tasksLayout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+  }
   .timer{font-size:56px;font-weight:800;text-align:center;margin:10px 0}
   .stars button{background:#fff;color:var(--rust);border:1px solid var(--rust);min-width:44px;padding:6px}
   @media(min-width:760px){
     nav{top:0;bottom:auto;border-top:0;border-bottom:1px solid var(--line)}
     main{padding-top:90px;padding-bottom:40px}
     header{padding-top:84px}
+  }
+  @media(min-width:900px){
+    nav{top:0;left:0;right:auto;bottom:0;width:220px;border-bottom:0;border-right:1px solid var(--line);flex-direction:column;justify-content:flex-start}
+    main{max-width:none;margin-left:220px;padding-top:20px;padding-bottom:40px}
+    header{max-width:none;margin-left:220px;padding-top:18px}
   }
 </style>
 </head>
@@ -59,12 +82,14 @@
 <nav id="nav" aria-label="Planner sections">
   <button data-view="today" class="active">Today</button>
   <button data-view="tasks">Tasks</button>
+  <button data-view="board">Board</button>
   <button data-view="calendar">Calendar</button>
   <button data-view="habits">Habits</button>
   <button data-view="notes">Notes</button>
   <button data-view="focus">Focus</button>
   <button data-view="dates">Dates</button>
   <button data-view="sync">Sync</button>
+  <div id="sideLists"><div class="sidehead">LISTS</div><div id="sideListsInner"></div></div>
 </nav>
 
 <main>
@@ -108,6 +133,9 @@
         <label for="tTitle">Title</label><input id="tTitle" required placeholder="e.g. Tidy the kitchen">
         <label for="tNotes">Notes</label><textarea id="tNotes" placeholder="Any details"></textarea>
         <div class="row">
+          <div><label for="tAssignee">Assignee (who is doing this)</label><input id="tAssignee" placeholder="e.g. Kelly, or leave blank"></div>
+        </div>
+        <div class="row">
           <div><label for="tCategory">Category</label><input id="tCategory" list="categories" placeholder="Home, Work, Health…"><datalist id="categories"><option>Home</option><option>Work</option><option>Personal</option><option>Errands</option></datalist></div>
           <div><label for="tPriority">Priority</label><select id="tPriority"><option>Medium</option><option>High</option><option>Low</option></select></div>
           <div><label for="tStatus">Status</label><select id="tStatus"><option>Not Started</option><option>In Progress</option><option>Done</option></select></div>
@@ -125,8 +153,9 @@
       </form>
     </div>
 
-    <div class="card">
+    <div id="tasksLayout"><div class="card">
       <h2>All tasks</h2>
+      <div class="row" id="smartLists"></div>
       <label for="tSearch">Search</label><input id="tSearch" placeholder="Search title or notes">
       <div class="row">
         <div><label for="fStatus">Status</label><select id="fStatus"><option>All</option><option>Not Started</option><option>In Progress</option><option>Done</option></select></div>
@@ -135,6 +164,10 @@
       </div>
       <div id="taskList"></div>
     </div>
+    <div class="card" id="detailCard">
+      <h2>Task details</h2>
+      <div id="taskDetail"><p class="small">Tap a task title to open its details here — edit it, set its dates, or delete it.</p></div>
+    </div></div>
 
     <div class="card">
       <h2>Data tools</h2>
@@ -149,6 +182,19 @@
     </div>
   </section>
 
+  <!-- BOARD / KANBAN -->
+  <section id="view-board" class="view">
+    <div class="card">
+      <h2>Kanban board</h2>
+      <p class="small">Drag a card to another column to change it — by status, category, priority, or who it is for. Tap a card to open its details.</p>
+      <div class="row">
+        <div><label for="boardGroup">Group by</label><select id="boardGroup"><option value="status">Status</option><option value="category">Category</option><option value="priority">Priority</option><option value="assignee">Assignee</option></select></div>
+        <div><label for="boardSort">Sort cards by</label><select id="boardSort"><option value="due">Due date</option><option value="priority">Priority</option><option value="start">Start time</option><option value="title">Title</option></select></div>
+      </div>
+      <div id="board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px"></div>
+    </div>
+  </section>
+
   <!-- CALENDAR -->
   <section id="view-calendar" class="view">
     <div class="card">
@@ -156,28 +202,47 @@
       <div class="row">
         <button type="button" class="secondary smallbtn" id="calPrev">‹ Previous</button>
         <button type="button" class="secondary smallbtn" id="calNext">Next ›</button>
-        <select id="calMode"><option value="month">Month grid</option><option value="week">Week list</option><option value="day">Day timeline</option></select>
+        <select id="calMode"><option value="year">Yearly</option><option value="month" selected>Monthly</option><option value="week">Weekly</option><option value="day">Daily</option><option value="agenda">Agenda</option><option value="timeline">Timeline</option><option value="multiday">Multi-day</option><option value="multiweek">Multi-week</option></select>
       </div>
+      <div class="row" style="margin-top:8px"><div><label for="timelineInterval">Timeline interval</label><select id="timelineInterval"><option value="daily">Daily</option><option value="weekly" selected>Weekly</option><option value="monthly">Monthly</option></select></div><p class="small">Used by the Timeline view: a day by the hour, a week, or a whole month.</p></div>
       <h3 id="calTitle"></h3>
       <div id="calBody"></div>
-      <p class="small">Tap a day to view it in Today. Tasks are shown by do-date.</p>
+      <p class="small">Tap a day to view it in Today. Tasks are shown by do-date. Agenda lists everything coming up, in date order.</p>
     </div>
   </section>
 
   <!-- HABITS -->
   <section id="view-habits" class="view">
     <div class="card">
+      <h2>Habit library</h2>
+      <p class="small">Tap Add to start one in one tap — no need to type it out. You can change its tiny version any time.</p>
+      <div id="habitLibrary"></div>
+    </div>
+    <div class="card">
       <h2>Add a habit</h2>
       <form id="habitForm">
         <label for="hName">Habit</label><input id="hName" required placeholder="e.g. Drink water">
         <label for="hTiny">Tiny version (tiny counts too)</label><input id="hTiny" placeholder="e.g. One glass of water">
+        <div class="row">
+          <div><label for="hFreq">How often</label><select id="hFreq"><option>Daily</option><option>Weekdays</option><option>Weekends</option><option>Custom days</option><option>Times per week</option></select></div>
+          <div><label for="hTrack">Track it as</label><select id="hTrack"><option value="check">Tick (done or not)</option><option value="count">Count (e.g. glasses)</option><option value="minutes">Minutes</option></select></div>
+          <div><label for="hTarget">Times per week (only for that option)</label><input type="number" id="hTarget" min="1" max="7" value="3"></div>
+        </div>
+        <div id="hDaysRow" style="display:none"><label>Custom days</label><div class="row" id="hDays">
+          <label><input type="checkbox" value="1"> Mon</label><label><input type="checkbox" value="2"> Tue</label><label><input type="checkbox" value="3"> Wed</label><label><input type="checkbox" value="4"> Thu</label><label><input type="checkbox" value="5"> Fri</label><label><input type="checkbox" value="6"> Sat</label><label><input type="checkbox" value="0"> Sun</label>
+        </div></div>
         <p style="margin-top:12px"><button type="submit">Save habit</button></p>
       </form>
     </div>
     <div class="card">
       <h2>This week</h2>
-      <p class="small">Tick a day when you do it — even the tiny version counts. No streak pressure, just a simple count.</p>
+      <p class="small">Tick a day when you do it — even the tiny version counts. No streak pressure, just a simple count. Days that are not scheduled for a habit are shown greyed out.</p>
       <div id="habitList"></div>
+    </div>
+    <div class="card">
+      <h2>Your habit stats</h2>
+      <p class="small">Gentle totals only — how often you did each habit this week and this month, and how that compares with the days it was scheduled. No streaks to lose.</p>
+      <div id="habitStats"></div>
     </div>
   </section>
 
@@ -208,8 +273,24 @@
       <h2>Focus timer</h2>
       <div class="timer" id="timerDisplay">25:00</div>
       <p id="timerLabel" style="text-align:center">Pomodoro focus — 25 minutes</p>
+      <p class="small" style="text-align:center">Set your own time — type the minutes, then tap Set focus time or Set break time.</p>
       <div class="row">
-        <button type="button" id="btnFocus">Pomodoro 25</button>
+        <div><label for="focusMinutes">Focus minutes</label><input type="number" id="focusMinutes" min="1" max="180" value="25"></div>
+        <div><label for="breakMinutes">Break minutes</label><input type="number" id="breakMinutes" min="1" max="60" value="5"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="btnSetFocus">Set focus time</button>
+        <button type="button" class="secondary" id="btnSetBreak">Set break time</button>
+      </div>
+      <p class="small" style="text-align:center">Quick presets:</p>
+      <div class="row">
+        <button type="button" class="secondary smallbtn" data-focusmin="5">5 min</button>
+        <button type="button" class="secondary smallbtn" data-focusmin="15">15 min</button>
+        <button type="button" class="secondary smallbtn" data-focusmin="25">25 min</button>
+        <button type="button" class="secondary smallbtn" data-focusmin="50">50 min</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button type="button" class="secondary" id="btnFocus">Pomodoro 25</button>
         <button type="button" class="secondary" id="btnBreak">Break 5</button>
         <button type="button" class="secondary" id="btnFive">Just 5 Minutes</button>
       </div>
@@ -345,18 +426,23 @@ function esc(s) {
 }
 function taskCard(t) {
   const starred = t.starred ? '★' : '☆';
-  return '<div class="task"><input type="checkbox" ' + (t.status === 'Done' ? 'checked' : '') + ' data-done="' + t.id + '" aria-label="Mark done" style="width:22px;height:22px;accent-color:#0F766E;flex:0 0 auto">'
-    + '<div style="flex:1"><div class="' + (t.status === 'Done' ? 'done' : '') + '"><strong>' + esc(t.title) + '</strong> '
+  const due = t.dueDate || '';
+  const todayStr = localDateStr(new Date());
+  const overdue = due && due < todayStr && t.status !== 'Done';
+  return '<div class="task taskrow"><button type="button" class="roundcheck' + (t.status === 'Done' ? ' on' : '') + '" data-done="' + t.id + '" aria-label="Mark done">' + (t.status === 'Done' ? '✓' : '') + '</button>'
+    + '<div style="flex:1" data-select="' + t.id + '"><div class="' + (t.status === 'Done' ? 'done' : '') + ' tasktitle"><strong>' + esc(t.title) + '</strong> '
     + '<span class="pill ' + (t.priority === 'High' ? 'high' : t.priority === 'Low' ? 'low' : '') + '">' + esc(t.priority) + '</span> '
     + '<span class="pill">' + esc(t.status) + '</span></div>'
     + (t.notes ? '<div>' + esc(t.notes) + '</div>' : '')
-    + '<div class="small">Category: ' + esc(t.category || '—') + ' · Do: ' + fmtDate(t.doDate) + ' · Due: ' + fmtDate(t.dueDate)
+    + '<div class="metaline">' + (due ? '<span class="duechip' + (overdue ? ' overdue' : '') + '">Due ' + fmtDate(due) + '</span> ' : '')
+    + 'Do: ' + fmtDate(t.doDate) + ' · ' + esc(t.category || '—') + (t.assignee ? ' · For: ' + esc(t.assignee) : '')
     + (t.startTime ? ' · ' + esc(t.startTime) + (t.duration ? ' for ' + t.duration + ' min' : '') : '')
     + (t.recurring && t.recurring !== 'None' ? ' · Repeats: ' + esc(t.recurring) : '') + '</div>'
     + '<div class="row" style="margin-top:6px"><button type="button" class="secondary smallbtn" data-star="' + t.id + '">' + starred + ' Today\'s Three</button>'
-    + '<button type="button" class="secondary smallbtn" data-edit="' + t.id + '">Edit</button>'
+    + '<button type="button" class="secondary smallbtn" data-select="' + t.id + '">Details</button>'
     + '<button type="button" class="secondary smallbtn" data-del="' + t.id + '">Delete</button></div></div></div>';
 }
+function addDaysStr(ds, delta) { const d = new Date(ds + 'T12:00:00'); d.setDate(d.getDate() + delta); return localDateStr(d); }
 function tasksForDay(dateStr) {
   return state.tasks.filter((t) => t.doDate === dateStr).sort((a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
 }
@@ -383,7 +469,10 @@ function renderToday() {
 function bindTaskButtons(root) {
   if (!root) return;
   root.querySelectorAll('[data-done]').forEach((el) => {
-    el.onclick = () => { const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { t.status = el.checked ? 'Done' : 'Not Started'; stamp(t); save(); renderAll(); } };
+    el.onclick = (ev) => { ev.stopPropagation(); const t = state.tasks.find((x) => x.id === el.dataset.done); if (t) { t.status = t.status === 'Done' ? 'Not Started' : 'Done'; stamp(t); save(); renderAll(); } };
+  });
+  root.querySelectorAll('[data-select]').forEach((el) => {
+    el.onclick = (ev) => { ev.stopPropagation(); selectTask(el.dataset.select); };
   });
   root.querySelectorAll('[data-star]').forEach((el) => {
     el.onclick = () => {
@@ -395,16 +484,55 @@ function bindTaskButtons(root) {
   root.querySelectorAll('[data-del]').forEach((el) => {
     el.onclick = () => { if (confirm('Delete this task?')) { recordDeletion(el.dataset.del); state.tasks = state.tasks.filter((x) => x.id !== el.dataset.del); save(); renderAll(); } };
   });
-  root.querySelectorAll('[data-edit]').forEach((el) => {
-    el.onclick = () => {
-      const t = state.tasks.find((x) => x.id === el.dataset.edit); if (!t) return;
-      const title = prompt('Edit task title', t.title); if (title === null) return;
-      t.title = title.trim() || t.title;
-      const notes = prompt('Edit notes', t.notes || ''); if (notes !== null) t.notes = notes;
-      const status = prompt('Status: Not Started, In Progress, or Done', t.status); if (status && ['Not Started', 'In Progress', 'Done'].includes(status)) t.status = status;
-      stamp(t); save(); renderAll();
-    };
-  });
+}
+let taskSmart = 'all';
+let selectedTaskId = null;
+function smartLists() {
+  const todayStr = localDateStr(new Date());
+  const in7 = (d) => d && d >= todayStr && d <= localDateStr(new Date(Date.now() + 7 * 86400000));
+  return [
+    { key: 'all', label: 'All tasks', count: state.tasks.length },
+    { key: 'today', label: 'Today', count: state.tasks.filter((t) => t.doDate === todayStr || t.dueDate === todayStr).length },
+    { key: 'upcoming', label: 'Next 7 days', count: state.tasks.filter((t) => t.status !== 'Done' && (in7(t.doDate) || in7(t.dueDate))).length },
+    { key: 'done', label: 'Completed', count: state.tasks.filter((t) => t.status === 'Done').length }
+  ];
+}
+function renderSideLists() {
+  const el = $('sideListsInner'); if (!el) return;
+  const cats = [...new Set(state.tasks.map((t) => t.category).filter(Boolean))].sort();
+  const items = smartLists().concat(cats.map((c) => ({ key: 'cat:' + c, label: c, count: state.tasks.filter((t) => t.category === c).length })));
+  el.innerHTML = items.map((it) => '<button type="button" class="sidebtn' + (taskSmart === it.key ? ' active' : '') + '" data-smart="' + esc(it.key) + '">' + esc(it.label) + ' (' + it.count + ')</button>').join('');
+  el.querySelectorAll('[data-smart]').forEach((b) => { b.onclick = () => { taskSmart = b.dataset.smart; $('fStatus').value = 'All'; renderTasks(); renderSideLists(); showView('tasks'); }; });
+}
+function renderSmartChips() {
+  const el = $('smartLists'); if (!el) return;
+  el.innerHTML = smartLists().map((it) => '<button type="button" class="secondary smallbtn' + (taskSmart === it.key ? '' : '') + '" data-smart="' + it.key + '" style="' + (taskSmart === it.key ? 'background:var(--rust);color:#fff;border-color:var(--rust)' : '') + '">' + esc(it.label) + ' (' + it.count + ')</button>').join('');
+  el.querySelectorAll('[data-smart]').forEach((b) => { b.onclick = () => { taskSmart = b.dataset.smart; $('fStatus').value = 'All'; renderTasks(); renderSideLists(); }; });
+}
+function selectTask(id) {
+  selectedTaskId = id; showView('tasks'); renderTaskDetail();
+}
+function renderTaskDetail() {
+  const el = $('taskDetail'); if (!el) return;
+  const t = state.tasks.find((x) => x.id === selectedTaskId);
+  if (!t) { el.innerHTML = '<p class="small">Tap a task title to open its details here — edit it, set its dates, or delete it.</p>'; return; }
+  el.innerHTML = '<label>Title</label><input id="dTitle" value="' + esc(t.title).replace(/"/g, '&quot;') + '">'
+    + '<label>Notes</label><textarea id="dNotes">' + esc(t.notes || '') + '</textarea>'
+    + '<div class="row"><div><label>Priority</label><select id="dPri"><option' + (t.priority === 'High' ? ' selected' : '') + '>High</option><option' + (t.priority === 'Medium' ? ' selected' : '') + '>Medium</option><option' + (t.priority === 'Low' ? ' selected' : '') + '>Low</option></select></div>'
+    + '<div><label>Status</label><select id="dStatus"><option' + (t.status === 'Not Started' ? ' selected' : '') + '>Not Started</option><option' + (t.status === 'In Progress' ? ' selected' : '') + '>In Progress</option><option' + (t.status === 'Done' ? ' selected' : '') + '>Done</option></select></div></div>'
+    + '<div class="row"><div><label>Do-date</label><input type="date" id="dDo" value="' + (t.doDate || '') + '"></div><div><label>Due-date</label><input type="date" id="dDue" value="' + (t.dueDate || '') + '"></div></div>'
+    + '<label>Assignee</label><input id="dAssignee" value="' + esc(t.assignee || '').replace(/"/g, '&quot;') + '" placeholder="Who is doing this?">'
+    + '<div class="row"><div><label>Start time</label><input type="time" id="dStart" value="' + (t.startTime || '') + '"></div><div><label>Duration (min)</label><input type="number" id="dDur" min="5" step="5" value="' + (t.duration || 30) + '"></div></div>'
+    + '<div class="row" style="margin-top:12px"><button type="button" id="dSave">Save changes</button><button type="button" class="secondary" id="dClose">Close</button><button type="button" class="secondary" id="dDel">Delete task</button></div>';
+  $('dSave').onclick = () => {
+    t.title = $('dTitle').value.trim() || t.title; t.notes = $('dNotes').value.trim();
+    t.priority = $('dPri').value; t.status = $('dStatus').value;
+    t.doDate = $('dDo').value || t.doDate; t.dueDate = $('dDue').value || t.dueDate; t.assignee = $('dAssignee').value.trim();
+    t.startTime = $('dStart').value; t.duration = parseInt($('dDur').value, 10) || t.duration;
+    stamp(t); save(); renderAll();
+  };
+  $('dClose').onclick = () => { selectedTaskId = null; renderTaskDetail(); };
+  $('dDel').onclick = () => { if (confirm('Delete this task?')) { recordDeletion(t.id); state.tasks = state.tasks.filter((x) => x.id !== t.id); selectedTaskId = null; save(); renderAll(); } };
 }
 function renderTasks() {
   const q = ($('tSearch').value || '').toLowerCase();
@@ -412,12 +540,51 @@ function renderTasks() {
   const cats = [...new Set(state.tasks.map((t) => t.category).filter(Boolean))].sort();
   const sel = $('fCat');
   sel.innerHTML = '<option>All</option>' + cats.map((c) => '<option' + (c === fc ? ' selected' : '') + '>' + esc(c) + '</option>').join('');
-  const list = state.tasks.filter((t) =>
-    (fs === 'All' || t.status === fs) && (fc === 'All' || t.category === fc) && (fp === 'All' || t.priority === fp)
+  const todayStr = localDateStr(new Date());
+  const in7 = (d) => d && d >= todayStr && d <= localDateStr(new Date(Date.now() + 7 * 86400000));
+  const smartOk = (t) => taskSmart === 'all' ? true : taskSmart === 'today' ? (t.doDate === todayStr || t.dueDate === todayStr) : taskSmart === 'upcoming' ? (t.status !== 'Done' && (in7(t.doDate) || in7(t.dueDate))) : taskSmart === 'done' ? t.status === 'Done' : taskSmart.startsWith('cat:') ? t.category === taskSmart.slice(4) : true;
+  const list = state.tasks.filter((t) => smartOk(t)
+    && (fs === 'All' || t.status === fs) && (fc === 'All' || t.category === fc) && (fp === 'All' || t.priority === fp)
     && ((t.title + ' ' + (t.notes || '')).toLowerCase().includes(q))
   ).sort((a, b) => (a.doDate || '').localeCompare(b.doDate || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+  renderSmartChips(); renderSideLists(); renderTaskDetail();
   $('taskList').innerHTML = list.length ? list.map(taskCard).join('') : '<p>No tasks match. Try clearing a filter.</p>';
   bindTaskButtons($('taskList'));
+}
+function renderBoard() {
+  const el = $('board'); if (!el) return;
+  const group = $('boardGroup').value, sortBy = $('boardSort').value;
+  let groups = [];
+  if (group === 'status') groups = ['Not Started', 'In Progress', 'Done'];
+  else if (group === 'priority') groups = ['High', 'Medium', 'Low'];
+  else if (group === 'category') groups = [...new Set(state.tasks.map((t) => t.category || 'Uncategorised'))].sort();
+  else groups = [...new Set(state.tasks.map((t) => t.assignee || 'Unassigned'))].sort();
+  const priRank = { High: 0, Medium: 1, Low: 2 };
+  const sortFn = (a, b) => sortBy === 'priority' ? priRank[a.priority] - priRank[b.priority] : sortBy === 'start' ? (a.startTime || '').localeCompare(b.startTime || '') : sortBy === 'title' ? a.title.localeCompare(b.title) : (a.dueDate || '').localeCompare(b.dueDate || '');
+  el.innerHTML = groups.map((g) => {
+    const cards = state.tasks.filter((t) => group === 'status' ? t.status === g : group === 'priority' ? t.priority === g : group === 'category' ? (t.category || 'Uncategorised') === g : (t.assignee || 'Unassigned') === g).sort(sortFn);
+    return '<div data-boardcol="' + esc(g) + '" style="background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:10px;min-height:120px"><strong>' + esc(g) + ' (' + cards.length + ')</strong>'
+      + cards.map((t) => '<div draggable="true" data-boardtask="' + t.id + '" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;cursor:grab"><strong>' + esc(t.title) + '</strong>'
+      + '<div class="small">' + (t.dueDate ? 'Due ' + fmtDate(t.dueDate) + ' · ' : '') + esc(t.priority) + ' · ' + esc(t.status) + (t.assignee ? ' · For: ' + esc(t.assignee) : '') + '</div></div>').join('')
+      + (cards.length ? '' : '<p class="small">Drop a card here.</p>') + '</div>';
+  }).join('') || '<p>No tasks yet.</p>';
+  el.querySelectorAll('[data-boardtask]').forEach((card) => {
+    card.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', card.dataset.boardtask); });
+    card.onclick = () => selectTask(card.dataset.boardtask);
+  });
+  el.querySelectorAll('[data-boardcol]').forEach((col) => {
+    col.addEventListener('dragover', (e) => e.preventDefault());
+    col.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const t = state.tasks.find((x) => x.id === e.dataTransfer.getData('text/plain')); if (!t) return;
+      const g = col.dataset.boardcol;
+      if (group === 'status') t.status = g;
+      else if (group === 'priority') t.priority = g;
+      else if (group === 'category') t.category = g === 'Uncategorised' ? '' : g;
+      else t.assignee = g === 'Unassigned' ? '' : g;
+      stamp(t); save(); renderAll();
+    });
+  });
 }
 function renderCalendar() {
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
@@ -450,31 +617,209 @@ function renderCalendar() {
     }
     body.innerHTML = html;
     body.querySelectorAll('[data-day]').forEach((el) => { el.onclick = () => { selectedDate = el.dataset.day; showView('today'); }; });
+  } else if (calMode === 'year') {
+    $('calTitle').textContent = 'Year ' + y;
+    let html = '<div class="row">';
+    for (let mm = 0; mm < 12; mm++) {
+      const first = new Date(y, mm, 1);
+      const startOffset = (first.getDay() + 6) % 7;
+      const daysInMonth = new Date(y, mm + 1, 0).getDate();
+      const mTasks = state.tasks.filter((t) => t.doDate && t.doDate.startsWith(y + '-' + String(mm + 1).padStart(2, '0')));
+      html += '<div class="card" style="flex:1 1 220px"><strong>' + first.toLocaleDateString(undefined, { month: 'long' }) + '</strong> <span class="small">(' + mTasks.length + ' task' + (mTasks.length === 1 ? '' : 's') + ')</span><div class="cal" style="font-size:12px">';
+      for (let i = 0; i < startOffset; i++) html += '<span></span>';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const ds = localDateStr(new Date(y, mm, d));
+        const count = state.tasks.filter((t) => t.doDate === ds).length;
+        html += '<button type="button" data-day="' + ds + '" style="min-height:34px;padding:2px" class="' + (count ? 'has' : '') + (ds === selectedDate ? ' sel' : '') + '">' + d + '</button>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-day]').forEach((el) => { el.onclick = () => { selectedDate = el.dataset.day; showView('today'); }; });
+  } else if (calMode === 'agenda') {
+    $('calTitle').textContent = 'Agenda — from ' + fmtDate(localDateStr(calCursor));
+    const start = localDateStr(calCursor);
+    const upcoming = state.tasks.filter((t) => (t.doDate || t.dueDate || '') >= start && t.status !== 'Done')
+      .sort((a, b) => ((a.doDate || a.dueDate) || '').localeCompare((b.doDate || b.dueDate) || '') || (a.startTime || '').localeCompare(b.startTime || ''));
+    const doneSoon = state.tasks.filter((t) => (t.doDate || t.dueDate || '') >= start && t.status === 'Done').length;
+    let html = '<p class="small">' + upcoming.length + ' upcoming task' + (upcoming.length === 1 ? '' : 's') + (doneSoon ? ', plus ' + doneSoon + ' already done.' : '') + '</p>';
+    let lastDate = '';
+    upcoming.forEach((t) => {
+      const d = t.doDate || t.dueDate;
+      if (d !== lastDate) { lastDate = d; html += '<h3>' + fmtDate(d) + '</h3>'; }
+      html += '<div class="block"><strong>' + esc(t.startTime || 'Anytime') + (t.duration ? ' · ' + t.duration + ' min' : '') + '</strong> — ' + esc(t.title)
+        + ' <span class="pill">' + esc(t.priority) + '</span> <span class="pill">' + esc(t.status) + '</span>'
+        + ' <button type="button" class="secondary smallbtn" data-day="' + d + '">Open day</button></div>';
+    });
+    if (!upcoming.length) html += '<p>Nothing coming up. Add a task in Tasks to start your agenda.</p>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-day]').forEach((el) => { el.onclick = () => { selectedDate = el.dataset.day; showView('today'); }; });
+  } else if (calMode === 'timeline') {
+    const interval = $('timelineInterval') ? $('timelineInterval').value : 'weekly';
+    if (interval === 'daily') {
+      const ds = localDateStr(calCursor);
+      $('calTitle').textContent = 'Timeline — ' + fmtDate(ds);
+      const dayTasks = tasksForDay(ds).sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+      body.innerHTML = '<p class="small">One day, by time. Bar length shows duration (up to 3 hours = full width).</p>'
+        + (dayTasks.length ? dayTasks.map((t) => '<div style="margin:10px 0"><strong>' + esc(t.startTime || 'Anytime') + '</strong> — ' + esc(t.title)
+        + '<div style="background:var(--peach);border-radius:999px;height:16px;overflow:hidden;margin-top:4px"><div style="width:' + Math.min(100, Math.round((t.duration || 30) / 180 * 100)) + '%;height:16px;background:var(--rust)"></div></div>'
+        + '<div class="small">' + (t.duration || 30) + ' min · Due ' + fmtDate(t.dueDate) + '</div></div>').join('') : '<p>No tasks on this day.</p>');
+    } else {
+      let days = [];
+      if (interval === 'weekly') { const mon = weekMonday(calCursor); for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); days.push(localDateStr(d)); } }
+      else { const y2 = calCursor.getFullYear(), m2 = calCursor.getMonth(); const dim = new Date(y2, m2 + 1, 0).getDate(); for (let d = 1; d <= dim; d++) days.push(localDateStr(new Date(y2, m2, d))); }
+      $('calTitle').textContent = 'Timeline — ' + fmtDate(days[0]) + ' to ' + fmtDate(days[days.length - 1]);
+      const tlTasks = state.tasks.filter((t) => t.doDate && t.doDate <= days[days.length - 1] && (t.dueDate || t.doDate) >= days[0]).sort((a, b) => (a.doDate || '').localeCompare(b.doDate || ''));
+      let html = '<p class="small">Project timeline: each bar runs from do-date to due-date, so you can see how long a task lasts. Drag a bar to another day to move the whole task.</p><div style="overflow-x:auto"><table style="border-collapse:collapse;min-width:640px"><tr><th style="text-align:left;padding:6px">Task</th>' + days.map((d) => '<th style="padding:6px;font-size:12px">' + new Date(d + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + '</th>').join('') + '</tr>';
+      tlTasks.forEach((t) => {
+        const from = t.doDate, to = t.dueDate || t.doDate;
+        html += '<tr><td style="padding:6px;white-space:nowrap">' + esc(t.title) + '</td>' + days.map((d) => {
+          const inSpan = d >= from && d <= to;
+          return '<td data-dropday="' + d + '" style="padding:2px;min-width:34px;text-align:center">' + (inSpan ? '<div draggable="true" data-dragtask="' + t.id + '" style="background:var(--rust);color:#fff;border-radius:999px;padding:4px 2px;font-size:11px;cursor:grab" title="Drag to move ' + esc(t.title) + '">●</div>' : '<span style="color:var(--line)">·</span>') + '</td>';
+        }).join('') + '</tr>';
+      });
+      html += '</table></div>';
+      if (!tlTasks.length) html += '<p>No tasks in this period. Add a task with a do-date and due-date to see its bar here.</p>';
+      body.innerHTML = html;
+      body.querySelectorAll('[data-dragtask]').forEach((el) => { el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', el.dataset.dragtask); }); });
+      body.querySelectorAll('[data-dropday]').forEach((cell) => {
+        cell.addEventListener('dragover', (e) => e.preventDefault());
+        cell.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const id = e.dataTransfer.getData('text/plain'); const t = state.tasks.find((x) => x.id === id); if (!t || !t.doDate) return;
+          const delta = Math.round((new Date(cell.dataset.dropday + 'T12:00:00') - new Date(t.doDate + 'T12:00:00')) / 86400000);
+          if (!delta) return;
+          t.doDate = addDaysStr(t.doDate, delta); if (t.dueDate) t.dueDate = addDaysStr(t.dueDate, delta);
+          stamp(t); save(); renderCalendar(); renderTasks();
+        });
+      });
+    }
+  } else if (calMode === 'multiday') {
+    const startDs = localDateStr(calCursor);
+    $('calTitle').textContent = 'Multi-day — ' + fmtDate(startDs) + ' to ' + fmtDate(addDaysStr(startDs, 2));
+    let html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+    for (let i = 0; i < 3; i++) {
+      const ds = addDaysStr(startDs, i);
+      const dayTasks = tasksForDay(ds);
+      html += '<div class="card"><strong>' + fmtDate(ds) + '</strong>' + (dayTasks.length ? dayTasks.map((t) => '<div class="block">' + esc(t.startTime || 'Anytime') + ' — ' + esc(t.title) + '</div>').join('') : '<p class="small">Free — nothing planned.</p>')
+        + '<button type="button" class="secondary smallbtn" data-day="' + ds + '">Open day</button></div>';
+    }
+    html += '</div><p class="small">Use Previous / Next to jump 3 days at a time, so you can adjust a few days together.</p>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-day]').forEach((el) => { el.onclick = () => { selectedDate = el.dataset.day; showView('today'); }; });
+  } else if (calMode === 'multiweek') {
+    const mon = weekMonday(calCursor);
+    const startDs = localDateStr(mon);
+    $('calTitle').textContent = 'Multi-week — ' + fmtDate(startDs) + ' to ' + fmtDate(addDaysStr(startDs, 13));
+    let html = '<div class="cal">';
+    for (let i = 0; i < 14; i++) {
+      const ds = addDaysStr(startDs, i);
+      const dayTasks = tasksForDay(ds);
+      html += '<button type="button" data-day="' + ds + '" style="min-height:72px;padding:6px;text-align:left" class="' + (dayTasks.length ? 'has' : '') + (ds === selectedDate ? ' sel' : '') + '"><strong>' + new Date(ds + 'T12:00:00').getDate() + '</strong><br><small>' + (dayTasks.length ? esc(dayTasks.slice(0, 2).map((t) => t.title).join(', ')) + (dayTasks.length > 2 ? ' +' + (dayTasks.length - 2) : '') : 'Free') + '</small></button>';
+    }
+    html += '</div><p class="small">Two weeks at a glance. Tap a day to open it, or use Previous / Next to jump two weeks.</p>';
+    body.innerHTML = html;
+    body.querySelectorAll('[data-day]').forEach((el) => { el.onclick = () => { selectedDate = el.dataset.day; showView('today'); }; });
   } else {
+    $('calTitle').textContent = fmtDate(selectedDate);
     const dayTasks = tasksForDay(selectedDate);
     body.innerHTML = '<p><strong>' + fmtDate(selectedDate) + '</strong></p>'
       + (dayTasks.length ? '<div class="timeline">' + dayTasks.map((t) => '<div class="block"><strong>' + esc(t.startTime || 'Anytime') + (t.duration ? ' · ' + t.duration + ' min' : '') + '</strong> — ' + esc(t.title) + '</div>').join('') + '</div>' : '<p>No tasks for this day.</p>');
   }
 }
 function weekMonday(d) { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function habitScheduled(h, d) {
+  const freq = h.freq || 'Daily';
+  const wd = d.getDay();
+  if (freq === 'Weekdays') return wd >= 1 && wd <= 5;
+  if (freq === 'Weekends') return wd === 0 || wd === 6;
+  if (freq === 'Custom days') return Array.isArray(h.days) && h.days.includes(wd);
+  return true;
+}
+function habitValue(h, ds) {
+  const v = h.checks ? h.checks[ds] : undefined;
+  if (v === true) return 1;
+  if (typeof v === 'number') return v;
+  return 0;
+}
+function habitLibraryList() {
+  return [
+    { name: 'Drink water', tiny: 'One glass of water', track: 'count' },
+    { name: 'Stretch', tiny: 'Stretch for 2 minutes', track: 'minutes' },
+    { name: 'Read', tiny: 'Read 5 pages', track: 'minutes' },
+    { name: 'Gentle walk', tiny: 'Walk to the door and back', track: 'minutes' },
+    { name: 'Journal', tiny: 'Write one line', track: 'check' },
+    { name: 'Tidy one area', tiny: 'Tidy for 5 minutes', track: 'minutes' },
+    { name: 'Breathe and pause', tiny: 'Slow breathing for 2 minutes', track: 'minutes' },
+    { name: 'Wind down for sleep', tiny: 'Start winding down, no screens', track: 'check' }
+  ];
+}
+function renderLibrary() {
+  const el = $('habitLibrary'); if (!el) return;
+  el.innerHTML = habitLibraryList().map((h) => '<div class="task"><div style="flex:1"><strong>' + esc(h.name) + '</strong><div class="small">Tiny version: ' + esc(h.tiny) + '</div></div>'
+    + '<button type="button" class="secondary smallbtn" data-lib="' + esc(h.name) + '">Add</button></div>').join('');
+  el.querySelectorAll('[data-lib]').forEach((b) => {
+    b.onclick = () => {
+      const preset = habitLibraryList().find((x) => x.name === b.dataset.lib); if (!preset) return;
+      state.habits.push(stamp({ id: uid(), name: preset.name, tiny: preset.tiny, checks: {}, freq: 'Daily', track: preset.track, target: 3, days: [] }));
+      save(); renderHabits();
+    };
+  });
+}
+function renderHabitStats() {
+  const el = $('habitStats'); if (!el) return;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const mon = weekMonday(new Date());
+  const weekDays = []; for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); weekDays.push(d); }
+  const weekDone = weekDays.filter((d) => d <= today).length;
+  const pct = (done, total) => total ? Math.round(done / total * 100) : 0;
+  let html = '';
+  state.habits.forEach((h) => {
+    const wSched = weekDays.filter((d) => d <= today && habitScheduled(h, d)).length;
+    const wDone = weekDays.filter((d) => d <= today && habitScheduled(h, d) && habitValue(h, localDateStr(d)) > 0).length;
+    const monthDays = [];
+    for (let d = 1; d <= today.getDate(); d++) monthDays.push(new Date(today.getFullYear(), today.getMonth(), d));
+    const mSched = monthDays.filter((d) => habitScheduled(h, d)).length;
+    const mDone = monthDays.filter((d) => habitScheduled(h, d) && habitValue(h, localDateStr(d)) > 0).length;
+    const total = Object.keys(h.checks || {}).filter((k) => habitValue(h, k) > 0).length;
+    const mPct = pct(mDone, mSched);
+    html += '<div style="margin:10px 0"><strong>' + esc(h.name) + '</strong>'
+      + '<div class="small">This week: ' + wDone + ' of ' + wSched + ' scheduled days · This month: ' + mDone + ' of ' + mSched + ' (' + mPct + '%) · ' + total + ' days in total</div>'
+      + '<div style="background:var(--peach);border-radius:999px;height:12px;overflow:hidden"><div style="width:' + mPct + '%;height:12px;background:var(--rust)"></div></div></div>';
+  });
+  el.innerHTML = html || '<p>No habits yet. Add one from the library above.</p>';
+}
 function renderHabits() {
+  renderLibrary();
   const mon = weekMonday(new Date());
   const days = [];
   for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); days.push(d); }
   $('habitList').innerHTML = state.habits.length ? state.habits.map((h) => {
-    const count = days.filter((d) => h.checks && h.checks[localDateStr(d)]).length;
+    const track = h.track || 'check';
+    const count = days.filter((d) => habitScheduled(h, d) && habitValue(h, localDateStr(d)) > 0).length;
+    const sched = days.filter((d) => habitScheduled(h, d)).length;
     return '<div class="task"><div style="flex:1"><strong>' + esc(h.name) + '</strong>'
       + (h.tiny ? '<div class="small">Tiny version: ' + esc(h.tiny) + '</div>' : '')
-      + '<div class="small">This week: ' + count + ' of 7 days</div>'
-      + '<div class="week">' + days.map((d) => '<span>' + d.toLocaleDateString(undefined, { weekday: 'narrow' }) + '<br><input type="checkbox" data-habit="' + h.id + '" data-day="' + localDateStr(d) + '" ' + (h.checks && h.checks[localDateStr(d)] ? 'checked' : '') + '></span>').join('') + '</div>'
+      + '<div class="small">' + esc(h.freq || 'Daily') + (h.freq === 'Times per week' ? ' · target ' + (h.target || 3) + ' times' : '') + ' · Tracked as: ' + esc(track) + ' · This week: ' + count + ' of ' + sched + ' scheduled days</div>'
+      + '<div class="week">' + days.map((d) => {
+        const ds = localDateStr(d);
+        if (!habitScheduled(h, d)) return '<span style="opacity:.35">' + d.toLocaleDateString(undefined, { weekday: 'narrow' }) + '<br>—</span>';
+        if (track === 'check') return '<span>' + d.toLocaleDateString(undefined, { weekday: 'narrow' }) + '<br><input type="checkbox" data-habit="' + h.id + '" data-day="' + ds + '" ' + (habitValue(h, ds) > 0 ? 'checked' : '') + '></span>';
+        return '<span>' + d.toLocaleDateString(undefined, { weekday: 'narrow' }) + '<br><input type="number" min="0" style="width:52px;padding:4px" data-hcount="' + h.id + '" data-day="' + ds + '" value="' + (habitValue(h, ds) || '') + '" placeholder="0"></span>';
+      }).join('') + '</div>'
       + '<button type="button" class="secondary smallbtn" data-hdel="' + h.id + '" style="margin-top:8px">Delete habit</button></div></div>';
-  }).join('') : '<p>No habits yet. Add one above.</p>';
+  }).join('') : '<p>No habits yet. Add one above, or tap Add in the library.</p>';
   $('habitList').querySelectorAll('[data-habit]').forEach((el) => {
     el.onchange = () => { const h = state.habits.find((x) => x.id === el.dataset.habit); if (h) { h.checks = h.checks || {}; h.checks[el.dataset.day] = el.checked; stamp(h); save(); renderHabits(); } };
+  });
+  $('habitList').querySelectorAll('[data-hcount]').forEach((el) => {
+    el.onchange = () => { const h = state.habits.find((x) => x.id === el.dataset.hcount); if (h) { h.checks = h.checks || {}; const v = parseInt(el.value, 10); h.checks[el.dataset.day] = isNaN(v) ? false : v; stamp(h); save(); renderHabits(); } };
   });
   $('habitList').querySelectorAll('[data-hdel]').forEach((el) => {
     el.onclick = () => { if (confirm('Delete this habit?')) { recordDeletion(el.dataset.hdel); state.habits = state.habits.filter((x) => x.id !== el.dataset.hdel); save(); renderHabits(); } };
   });
+  renderHabitStats();
 }
 function renderNotes() {
   $('noteList').innerHTML = state.notes.length ? state.notes.map((n) => '<div class="card"><strong>' + esc(n.title) + '</strong><p>' + esc(n.body) + '</p>'
@@ -628,13 +973,14 @@ async function doPush() {
   await gistCall('/gists/' + meta.gistId, 'PATCH', { files: { 'kelly-planner-sync.json': { content: JSON.stringify(exportableState(), null, 2) } } });
   meta.lastSync = new Date().toISOString(); setSyncMeta(meta); renderSyncStatus();
 }
-function renderAll() { renderToday(); renderTasks(); renderCalendar(); renderHabits(); renderNotes(); renderDates(); renderSyncStatus(); }
+function renderAll() { renderToday(); renderTasks(); renderBoard(); renderCalendar(); renderHabits(); renderNotes(); renderDates(); renderSyncStatus(); }
 function showView(name) {
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   const el = $('view-' + name); if (el) el.classList.add('active');
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   if (name === 'today') renderToday();
   if (name === 'calendar') renderCalendar();
+  if (name === 'board') renderBoard();
   if (name === 'dates') renderDates();
   if (name === 'sync') renderSyncStatus();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -651,15 +997,33 @@ $('brainHead').onchange = saveBrain; $('brainEnergy').onchange = saveBrain;
 $('taskForm').onsubmit = (e) => {
   e.preventDefault();
   const title = $('tTitle').value.trim(); if (!title) return;
-  state.tasks.push(stamp({ id: uid(), title, notes: $('tNotes').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || localDateStr(new Date()), dueDate: $('tDue').value || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value, duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value, starred: false, isDemo: false }));
+  state.tasks.push(stamp({ id: uid(), title, notes: $('tNotes').value.trim(), assignee: $('tAssignee').value.trim(), category: $('tCategory').value.trim() || 'Personal', priority: $('tPriority').value, status: $('tStatus').value, doDate: $('tDo').value || localDateStr(new Date()), dueDate: $('tDue').value || $('tDo').value || localDateStr(new Date()), startTime: $('tStart').value, duration: parseInt($('tDur').value, 10) || 30, recurring: $('tRecur').value, starred: false, isDemo: false }));
   save(); e.target.reset(); $('tDur').value = 30; renderAll(); showView('tasks');
 };
 $('taskReset').onclick = () => { $('taskForm').reset(); $('tDur').value = 30; };
 $('tSearch').oninput = renderTasks; $('fStatus').onchange = renderTasks; $('fCat').onchange = renderTasks; $('fPri').onchange = renderTasks;
-$('calPrev').onclick = () => { calCursor.setMonth(calCursor.getMonth() - 1); renderCalendar(); };
-$('calNext').onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderCalendar(); };
+function calStep(dir) {
+  if (calMode === 'year') calCursor.setFullYear(calCursor.getFullYear() + dir);
+  else if (calMode === 'week') calCursor.setDate(calCursor.getDate() + 7 * dir);
+  else if (calMode === 'timeline') { const iv = $('timelineInterval') ? $('timelineInterval').value : 'weekly'; if (iv === 'daily') calCursor.setDate(calCursor.getDate() + dir); else if (iv === 'monthly') calCursor.setMonth(calCursor.getMonth() + dir); else calCursor.setDate(calCursor.getDate() + 7 * dir); }
+  else if (calMode === 'multiday') calCursor.setDate(calCursor.getDate() + 3 * dir);
+  else if (calMode === 'multiweek') calCursor.setDate(calCursor.getDate() + 14 * dir);
+  else if (calMode === 'day' || calMode === 'agenda') calCursor.setDate(calCursor.getDate() + dir);
+  else calCursor.setMonth(calCursor.getMonth() + dir);
+  renderCalendar();
+}
+$('timelineInterval').onchange = () => { if (calMode === 'timeline') renderCalendar(); };
+$('calPrev').onclick = () => calStep(-1);
+$('calNext').onclick = () => calStep(1);
 $('calMode').onchange = (e) => { calMode = e.target.value; renderCalendar(); };
-$('habitForm').onsubmit = (e) => { e.preventDefault(); const name = $('hName').value.trim(); if (!name) return; state.habits.push(stamp({ id: uid(), name, tiny: $('hTiny').value.trim(), checks: {} })); save(); e.target.reset(); renderHabits(); };
+$('boardGroup').onchange = renderBoard; $('boardSort').onchange = renderBoard;
+$('hFreq').onchange = () => { $('hDaysRow').style.display = $('hFreq').value === 'Custom days' ? 'block' : 'none'; };
+$('habitForm').onsubmit = (e) => {
+  e.preventDefault(); const name = $('hName').value.trim(); if (!name) return;
+  const days = [...document.querySelectorAll('#hDays input:checked')].map((x) => parseInt(x.value, 10));
+  state.habits.push(stamp({ id: uid(), name, tiny: $('hTiny').value.trim(), checks: {}, freq: $('hFreq').value, track: $('hTrack').value, target: parseInt($('hTarget').value, 10) || 3, days }));
+  save(); e.target.reset(); $('hDaysRow').style.display = 'none'; renderHabits();
+};
 $('noteForm').onsubmit = (e) => { e.preventDefault(); const title = $('nTitle').value.trim(); if (!title) return; state.notes.push(stamp({ id: uid(), title, body: $('nBody').value.trim() })); save(); e.target.reset(); renderNotes(); };
 $('listForm').onsubmit = (e) => { e.preventDefault(); const title = $('lTitle').value.trim(); if (!title) return; state.lists.push(stamp({ id: uid(), title, items: [] })); save(); e.target.reset(); renderNotes(); };
 $('dateForm').onsubmit = (e) => {
@@ -727,9 +1091,14 @@ $('clearDemoBtn').onclick = () => {
 let timerTotal = 25 * 60, timerLeft = 25 * 60, timerId = null, timerMode = 'Pomodoro focus';
 function timerText() { const m = Math.floor(timerLeft / 60), s = timerLeft % 60; return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'); }
 function setTimer(seconds, label) { clearInterval(timerId); timerId = null; timerTotal = seconds; timerLeft = seconds; timerMode = label; $('timerDisplay').textContent = timerText(); $('timerLabel').textContent = label; $('timerMsg').textContent = ''; }
-$('btnFocus').onclick = () => setTimer(25 * 60, 'Pomodoro focus — 25 minutes');
-$('btnBreak').onclick = () => setTimer(5 * 60, 'Break — 5 minutes');
-$('btnFive').onclick = () => setTimer(5 * 60, 'Just 5 Minutes');
+function focusMin() { const v = parseInt($('focusMinutes').value, 10); return v >= 1 && v <= 180 ? v : 25; }
+function breakMin() { const v = parseInt($('breakMinutes').value, 10); return v >= 1 && v <= 60 ? v : 5; }
+$('btnSetFocus').onclick = () => setTimer(focusMin() * 60, 'Focus — ' + focusMin() + ' minutes (your time)');
+$('btnSetBreak').onclick = () => setTimer(breakMin() * 60, 'Break — ' + breakMin() + ' minutes (your time)');
+document.querySelectorAll('[data-focusmin]').forEach((b) => { b.onclick = () => { $('focusMinutes').value = b.dataset.focusmin; setTimer(parseInt(b.dataset.focusmin, 10) * 60, 'Focus — ' + b.dataset.focusmin + ' minutes'); }; });
+$('btnFocus').onclick = () => { $('focusMinutes').value = 25; setTimer(25 * 60, 'Pomodoro focus — 25 minutes'); };
+$('btnBreak').onclick = () => { $('breakMinutes').value = 5; setTimer(5 * 60, 'Break — 5 minutes'); };
+$('btnFive').onclick = () => { $('focusMinutes').value = 5; setTimer(5 * 60, 'Just 5 Minutes'); };
 $('btnStart').onclick = () => {
   if (timerId) return;
   timerId = setInterval(() => {
